@@ -71,13 +71,13 @@ export function CreditLineActivatedPage() {
   
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Customer name + SIF number created during this application (shared, dummy).
+  // Customer name + CIF number created during this application (shared, dummy).
   const customerName = 'Aravind Kumar S.';
-  const [sifNumber] = useState(() => {
-    const existing = typeof window !== 'undefined' ? localStorage.getItem('sifNumber') : null;
+  const [cifNumber] = useState(() => {
+    const existing = typeof window !== 'undefined' ? localStorage.getItem('cifNumber') : null;
     if (existing) return existing;
-    const generated = `SIF-TN-${Math.floor(100000 + Math.random() * 900000)}`;
-    if (typeof window !== 'undefined') localStorage.setItem('sifNumber', generated);
+    const generated = `CIF-TN-${Math.floor(100000 + Math.random() * 900000)}`;
+    if (typeof window !== 'undefined') localStorage.setItem('cifNumber', generated);
     return generated;
   });
 
@@ -109,7 +109,7 @@ export function CreditLineActivatedPage() {
       amount: 'Credit Limit',
       usageTitle: 'Where you can use this',
       customerLabel: 'Customer Name',
-      sifLabel: 'SIF Number'
+      cifLabel: 'CIF Number'
     },
     Tamil: {
       title: 'வாழ்த்துக்கள்!',
@@ -122,7 +122,7 @@ export function CreditLineActivatedPage() {
       amount: 'கடன் வரம்பு',
       usageTitle: 'இதை எங்கு பயன்படுத்தலாம்',
       customerLabel: 'வாடிக்கையாளர் பெயர்',
-      sifLabel: 'SIF எண்'
+      cifLabel: 'CIF எண்'
     }
   };
 
@@ -253,8 +253,8 @@ export function CreditLineActivatedPage() {
                 <Hash className="w-4 h-4 text-[#315C9D]" strokeWidth={2} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold text-[#6b7280] uppercase tracking-wide mb-0.5">{t.sifLabel}</p>
-                <p className="text-sm font-mono font-semibold text-[#111827] leading-snug">{sifNumber}</p>
+                <p className="text-[10px] font-semibold text-[#6b7280] uppercase tracking-wide mb-0.5">{t.cifLabel}</p>
+                <p className="text-sm font-mono font-semibold text-[#111827] leading-snug">{cifNumber}</p>
               </div>
             </div>
           </motion.div>
