@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
-import { motion } from 'motion/react';
-import { ShieldCheck, ArrowRight, FileCheck, Loader2, CheckCircle, Lock, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ShieldCheck, ArrowRight, FileCheck, Loader2, CheckCircle, Lock, Check, PhoneCall, Mail, MessageSquare } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
@@ -40,6 +40,10 @@ export function CKYCConsentPage() {
   // Processing state
   const [currentProcessingStep, setCurrentProcessingStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+
+  // "Get CKYC number" helper sheet
+  const [showCkycHelpSheet, setShowCkycHelpSheet] = useState(false);
+  const CKYC_TOLLFREE = '1800 123 4567';
 
   // Pre-filled CKYC data
   const ckycId = ckycInput || 'CKYC-TN-2024-0047829';
@@ -192,6 +196,20 @@ export function CKYCConsentPage() {
                   )}
                 </button>
               </motion.div>
+
+              {/* Subtle "Get CKYC number" helper — opens missed-call info sheet */}
+              <div className="w-full mb-5 flex items-center justify-center gap-1.5 flex-wrap">
+                <span className="text-[12px] text-[#6b7280]">
+                  {selectedLanguage === 'English' ? 'Get CKYC number' : 'CKYC எண்ணைப் பெறுங்கள்'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowCkycHelpSheet(true)}
+                  className="text-[12px] font-semibold text-[#315C9D] underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] rounded-sm"
+                >
+                  {selectedLanguage === 'English' ? 'Know more' : 'மேலும் அறிக'}
+                </button>
+              </div>
 
               {/* Security note — only when user knows CKYC */}
               {ckycOption === 'know' && (
@@ -395,6 +413,79 @@ export function CKYCConsentPage() {
 
         </div>
       </main>
+
+      {/* ── Get CKYC number (missed-call) info sheet ── */}
+      <AnimatePresence>
+        {showCkycHelpSheet && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} exit={{ opacity: 0 }}
+              onClick={() => setShowCkycHelpSheet(false)}
+              className="fixed inset-0 bg-black z-[100]"
+            />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-[101] max-h-[85vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex justify-center pt-3 pb-2">
+                <div className="w-10 h-1 bg-[#d9d9d9] rounded-full" />
+              </div>
+
+              <div className="px-6 py-3 border-b border-[#e5e7eb]">
+                <h2 className="text-base font-semibold text-[#111827]">
+                  {selectedLanguage === 'English' ? 'Get your CKYC number' : 'உங்கள் CKYC எண்ணைப் பெறுங்கள்'}
+                </h2>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                <p className="text-sm text-[#374151] leading-relaxed">
+                  {selectedLanguage === 'English'
+                    ? 'Give a missed call from your registered mobile number to the toll-free number below. Your CKYC number will be sent to you by SMS and email.'
+                    : 'கீழே உள்ள கட்டணமில்லா எண்ணுக்கு உங்கள் பதிவு செய்யப்பட்ட மொபைல் எண்ணிலிருந்து ஒரு மிஸ்டு கால் கொடுங்கள். உங்கள் CKYC எண் SMS மற்றும் மின்னஞ்சல் மூலம் உங்களுக்கு அனுப்பப்படும்.'}
+                </p>
+
+                {/* Toll-free number */}
+                <div className="bg-[#f9fafb] border border-[#e5e7eb] rounded-xl p-4 text-center">
+                  <p className="text-[11px] font-semibold text-[#666666] uppercase tracking-wide mb-1">
+                    {selectedLanguage === 'English' ? 'Toll-free number' : 'கட்டணமில்லா எண்'}
+                  </p>
+                  <p className="text-xl font-bold text-[#111827] tracking-wide">{CKYC_TOLLFREE}</p>
+                </div>
+
+                {/* How you'll receive it */}
+                <div className="flex items-center justify-center gap-6">
+                  <div className="flex items-center gap-2 text-[#6b7280]">
+                    <MessageSquare className="w-4 h-4 text-[#315C9D]" strokeWidth={2} />
+                    <span className="text-[12px]">{selectedLanguage === 'English' ? 'SMS' : 'SMS'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[#6b7280]">
+                    <Mail className="w-4 h-4 text-[#315C9D]" strokeWidth={2} />
+                    <span className="text-[12px]">{selectedLanguage === 'English' ? 'Email' : 'மின்னஞ்சல்'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="px-6 py-5 border-t border-[#e5e7eb] space-y-3">
+                <a
+                  href={`tel:${CKYC_TOLLFREE.replace(/\s/g, '')}`}
+                  className="w-full bg-[#315C9D] text-white h-12 rounded-lg text-base font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                >
+                  <PhoneCall className="w-5 h-5" strokeWidth={2.5} />
+                  {selectedLanguage === 'English' ? 'Give a missed call' : 'மிஸ்டு கால் கொடுங்கள்'}
+                </a>
+                <button
+                  onClick={() => setShowCkycHelpSheet(false)}
+                  className="w-full bg-transparent text-[#315C9D] h-12 rounded-lg text-base font-semibold hover:bg-[#315C9D]/5 transition-colors"
+                >
+                  {selectedLanguage === 'English' ? 'Close' : 'மூடு'}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
