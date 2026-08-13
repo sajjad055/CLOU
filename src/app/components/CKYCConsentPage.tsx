@@ -44,6 +44,8 @@ export function CKYCConsentPage() {
   // "Get CKYC number" helper sheet
   const [showCkycHelpSheet, setShowCkycHelpSheet] = useState(false);
   const CKYC_TOLLFREE = '1800 123 4567';
+  // Registered mobile number the user must place the missed call from (dummy).
+  const registeredMobile = '+91 98765 43210';
 
   // Pre-filled CKYC data
   const ckycId = ckycInput || 'CKYC-TN-2024-0047829';
@@ -441,17 +443,23 @@ export function CKYCConsentPage() {
               <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
                 <p className="text-sm text-[#374151] leading-relaxed">
                   {selectedLanguage === 'English'
-                    ? 'Give a missed call from your registered mobile number to the toll-free number below. Your CKYC number will be sent to you by SMS and email.'
-                    : 'கீழே உள்ள கட்டணமில்லா எண்ணுக்கு உங்கள் பதிவு செய்யப்பட்ட மொபைல் எண்ணிலிருந்து ஒரு மிஸ்டு கால் கொடுங்கள். உங்கள் CKYC எண் SMS மற்றும் மின்னஞ்சல் மூலம் உங்களுக்கு அனுப்பப்படும்.'}
+                    ? 'Give a missed call from your registered mobile number below. Your CKYC number will then be sent to you by SMS and email.'
+                    : 'கீழே உள்ள உங்கள் பதிவு செய்யப்பட்ட மொபைல் எண்ணிலிருந்து ஒரு மிஸ்டு கால் கொடுங்கள். உங்கள் CKYC எண் SMS மற்றும் மின்னஞ்சல் மூலம் உங்களுக்கு அனுப்பப்படும்.'}
                 </p>
 
-                {/* Toll-free number */}
-                <div className="bg-[#f9fafb] border border-[#e5e7eb] rounded-xl p-4 text-center">
-                  <p className="text-[11px] font-semibold text-[#666666] uppercase tracking-wide mb-1">
-                    {selectedLanguage === 'English' ? 'Toll-free number' : 'கட்டணமில்லா எண்'}
+                {/* Registered mobile number — the emphasis: call must come from here */}
+                <div className="bg-[#eef3fa] border border-[#315C9D]/15 rounded-xl p-4 text-center">
+                  <p className="text-[11px] font-semibold text-[#315C9D] uppercase tracking-wide mb-1">
+                    {selectedLanguage === 'English' ? 'Call from your registered number' : 'உங்கள் பதிவு செய்யப்பட்ட எண்ணிலிருந்து அழைக்கவும்'}
                   </p>
-                  <p className="text-xl font-bold text-[#111827] tracking-wide">{CKYC_TOLLFREE}</p>
+                  <p className="text-xl font-bold text-[#111827] tracking-wide">{registeredMobile}</p>
                 </div>
+
+                {/* Toll-free number — secondary */}
+                <p className="text-center text-[12px] text-[#6b7280]">
+                  {selectedLanguage === 'English' ? 'Toll-free number: ' : 'கட்டணமில்லா எண்: '}
+                  <span className="font-medium text-[#374151]">{CKYC_TOLLFREE}</span>
+                </p>
 
                 {/* How you'll receive it */}
                 <div className="flex items-center justify-center gap-6">
