@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShieldCheck, ArrowRight, FileCheck, Loader2, CheckCircle, Lock, Check, PhoneCall, Mail, MessageSquare } from 'lucide-react';
+import { ShieldCheck, ArrowRight, FileCheck, Loader2, CheckCircle, Lock, Check, PhoneCall } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
@@ -460,18 +460,6 @@ export function CKYCConsentPage() {
                   {selectedLanguage === 'English' ? 'Toll-free number: ' : 'கட்டணமில்லா எண்: '}
                   <span className="font-medium text-[#374151]">{CKYC_TOLLFREE}</span>
                 </p>
-
-                {/* How you'll receive it */}
-                <div className="flex items-center justify-center gap-6">
-                  <div className="flex items-center gap-2 text-[#6b7280]">
-                    <MessageSquare className="w-4 h-4 text-[#315C9D]" strokeWidth={2} />
-                    <span className="text-[12px]">{selectedLanguage === 'English' ? 'SMS' : 'SMS'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[#6b7280]">
-                    <Mail className="w-4 h-4 text-[#315C9D]" strokeWidth={2} />
-                    <span className="text-[12px]">{selectedLanguage === 'English' ? 'Email' : 'மின்னஞ்சல்'}</span>
-                  </div>
-                </div>
               </div>
 
               {/* CTA */}
