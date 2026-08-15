@@ -28,6 +28,10 @@ import { CreditLineActivatedPage } from "./components/CreditLineActivatedPage";
 import { UPIConnectionPage } from "./components/UPIConnectionPage";
 import { PhonePeAppMock } from "./components/PhonePeAppMock";
 import { CreditLineDashboard } from "./components/CreditLineDashboard";
+import { HRMSDetailsPage } from "./components/HRMSDetailsPage";
+import { AccountChoicePage } from "./components/AccountChoicePage";
+import { IOBAccountEntryPage } from "./components/IOBAccountEntryPage";
+import { PANAadhaarEntryPage } from "./components/PANAadhaarEntryPage";
 import { Layout } from "./components/Layout";
 
 // On GitHub Pages the app is served from "/CLOU/". Vite exposes that as
@@ -156,6 +160,22 @@ export const router = createBrowserRouter([
       {
         path: "credit-line-dashboard",
         Component: CreditLineDashboard,
+      },
+      {
+        path: "hrms-details",
+        Component: HRMSDetailsPage,
+      },
+      {
+        path: "hrms-account-choice",
+        Component: AccountChoicePage,
+      },
+      {
+        path: "hrms-account-entry",
+        Component: IOBAccountEntryPage,
+      },
+      {
+        path: "hrms-pan-aadhaar",
+        Component: PANAadhaarEntryPage,
       },
     ],
   },

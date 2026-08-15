@@ -1,7 +1,28 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { Code2, X, Home, FileText, Phone, Lock, CheckCircle, Loader2, CreditCard, Settings, Sparkles, ShieldCheck, Fingerprint, FileCheck, Smartphone } from 'lucide-react';
+import { Code2, X, Home, FileText, Phone, Lock, CheckCircle, Loader2, CreditCard, Settings, Sparkles, ShieldCheck, Fingerprint, FileCheck, Smartphone, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { HRMS_FLOW_IDS, HRMS_FLOWS } from '../flows/hrmsFlows';
+import { resetJourney } from '../flows/hrmsJourney';
+
+/**
+ * Every flow-entry path in the panel, mapped to the `activeFlow` value it sets.
+ * The legacy `ckyc-only` and `combined` keys are preserved: they exist in
+ * `handleNavigate` today without a matching `routes` entry.
+ */
+const FLOW_ENTRY_PATHS: Record<string, string> = {
+  '/__flow-ckyc-only': 'ckyc-only',
+  '/__flow-combined': 'combined',
+  '/__flow-ntb-no-ckyc': 'ntb-no-ckyc',
+  '/__flow-etb-no-ckyc': 'etb-no-ckyc',
+  '/__flow-ntb-no-ckyc-id': 'ntb-no-ckyc-id',
+  '/__flow-etb-no-ckyc-id': 'etb-no-ckyc-id',
+  '/__flow-ntb-knows-ckyc': 'ntb-knows-ckyc',
+  '/__flow-etb-knows-ckyc': 'etb-knows-ckyc',
+  '/__flow-ntb-knows-ckyc-id': 'ntb-knows-ckyc-id',
+  '/__flow-etb-knows-ckyc-id': 'etb-knows-ckyc-id',
+  ...Object.fromEntries(HRMS_FLOW_IDS.map((id) => [`/__flow-${id}`, id])),
+};
 
 interface PageRoute {
   path: string;
@@ -19,6 +40,14 @@ const routes: PageRoute[] = [
   { path: '/__flow-etb-knows-ckyc', name: '▶ ETB, User Knows CKYC Number', icon: Sparkles, description: 'Phone → CKYC (knows) → OTP → CKYC pull → PAN (pre-filled) → ETB → Offers' },
   { path: '/__flow-ntb-knows-ckyc-id', name: '▶ NTB, Knows CKYC Number + Employee ID', icon: Sparkles, description: 'Phone → CKYC (knows) → OTP → CKYC pull → PAN → Aadhaar → Face → Employee ID → Offers' },
   { path: '/__flow-etb-knows-ckyc-id', name: '▶ ETB, Knows CKYC Number + Employee ID', icon: Sparkles, description: 'Phone → CKYC (knows) → OTP → CKYC pull → PAN → ETB → Employee ID → Offers' },
+  // Positions 9–13: the five HRMS journeys. Label and description come straight
+  // from the flow registry so the panel can never drift from HRMS_FLOWS.
+  ...HRMS_FLOW_IDS.map((id) => ({
+    path: `/__flow-${id}`,
+    name: HRMS_FLOWS[id].labelEn,
+    icon: Sparkles,
+    description: HRMS_FLOWS[id].descriptionEn,
+  })),
   { path: '/', name: 'Dashboard', icon: Home, description: 'KALANJIYAM home' },
   { path: '/advances-upi', name: 'UPI Landing', icon: FileText, description: 'Advances on UPI intro' },
   { path: '/phone-input', name: 'Phone Input', icon: Phone, description: 'Enter phone number' },
@@ -43,6 +72,7 @@ const routes: PageRoute[] = [
 
 export function DevPreview() {
   const [isOpen, setIsOpen] = useState(false);
+  const [flowError, setFlowError] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -52,63 +82,19 @@ export function DevPreview() {
   // }
 
   const handleNavigate = (path: string) => {
-    // Flow-start entries — set flow type and start from landing
-    if (path === '/__flow-ckyc-only') {
-      localStorage.setItem('activeFlow', 'ckyc-only');
-      navigate('/');
-      setIsOpen(false);
-      return;
-    }
-    if (path === '/__flow-combined') {
-      localStorage.setItem('activeFlow', 'combined');
-      navigate('/');
-      setIsOpen(false);
-      return;
-    }
-    if (path === '/__flow-ntb-no-ckyc') {
-      localStorage.setItem('activeFlow', 'ntb-no-ckyc');
-      navigate('/');
-      setIsOpen(false);
-      return;
-    }
-    if (path === '/__flow-etb-no-ckyc') {
-      localStorage.setItem('activeFlow', 'etb-no-ckyc');
-      navigate('/');
-      setIsOpen(false);
-      return;
-    }
-    if (path === '/__flow-ntb-no-ckyc-id') {
-      localStorage.setItem('activeFlow', 'ntb-no-ckyc-id');
-      navigate('/');
-      setIsOpen(false);
-      return;
-    }
-    if (path === '/__flow-etb-no-ckyc-id') {
-      localStorage.setItem('activeFlow', 'etb-no-ckyc-id');
-      navigate('/');
-      setIsOpen(false);
-      return;
-    }
-    if (path === '/__flow-ntb-knows-ckyc') {
-      localStorage.setItem('activeFlow', 'ntb-knows-ckyc');
-      navigate('/');
-      setIsOpen(false);
-      return;
-    }
-    if (path === '/__flow-etb-knows-ckyc') {
-      localStorage.setItem('activeFlow', 'etb-knows-ckyc');
-      navigate('/');
-      setIsOpen(false);
-      return;
-    }
-    if (path === '/__flow-ntb-knows-ckyc-id') {
-      localStorage.setItem('activeFlow', 'ntb-knows-ckyc-id');
-      navigate('/');
-      setIsOpen(false);
-      return;
-    }
-    if (path === '/__flow-etb-knows-ckyc-id') {
-      localStorage.setItem('activeFlow', 'etb-knows-ckyc-id');
+    // Flow-start entries — set flow type, clear any prior journey, start from landing
+    const flowId = FLOW_ENTRY_PATHS[path];
+    if (flowId) {
+      try {
+        localStorage.setItem('activeFlow', flowId);
+        resetJourney();
+      } catch {
+        // Storage unavailable: keep the panel open, announce it, navigate
+        // nowhere, and leave the previously selected flow in place.
+        setFlowError(true);
+        return;
+      }
+      setFlowError(false);
       navigate('/');
       setIsOpen(false);
       return;
@@ -187,6 +173,16 @@ export function DevPreview() {
                 <p className="text-sm text-white/80">Quick navigation between pages</p>
               </div>
 
+              {/* Flow selection failure */}
+              {flowError && (
+                <div role="alert" className="mx-4 mt-4 flex items-start gap-2 rounded-xl border-2 border-red-300 bg-red-50 p-3">
+                  <AlertCircle className="w-5 h-5 text-red-700 flex-shrink-0 mt-0.5" strokeWidth={2.5} aria-hidden="true" />
+                  <p className="text-sm text-red-800 leading-tight">
+                    Could not save the selected flow because browser storage is unavailable. The previous flow is still active.
+                  </p>
+                </div>
+              )}
+
               {/* Routes List */}
               <div className="p-4 space-y-2">
                 {routes.map((route, index) => {
@@ -200,7 +196,7 @@ export function DevPreview() {
                       animate={{ x: 0, opacity: 1 }}
                       transition={{ delay: index * 0.05 }}
                       onClick={() => handleNavigate(route.path)}
-                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all group hover:shadow-lg ${
+                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all group hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] ${
                         isActive
                           ? 'border-purple-500 bg-purple-50 shadow-md'
                           : 'border-gray-200 bg-white hover:border-purple-200'

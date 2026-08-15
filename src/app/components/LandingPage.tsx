@@ -4,6 +4,7 @@ import { ArrowRight, Play, CheckCircle2, ChevronDown, Zap, ShieldCheck } from 'l
 import { useState } from 'react';
 import { TopBar } from './TopBar';
 import { useLanguage } from '../hooks/useLanguage';
+import { getActiveFlow, hrmsEntryRoute } from '../flows/hrmsFlows';
 import salaryAdvanceImg from '@/assets/phone-upi-hero.png';
 import festivalAdvanceImg from '@/assets/festival-vectorized.svg';
 import gadgetAdvanceImg from '@/assets/gadget-vectorized.svg';
@@ -136,7 +137,7 @@ export function LandingPage() {
           <motion.button
             initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/phone-input')}
+            onClick={() => navigate(hrmsEntryRoute(getActiveFlow()) ?? '/phone-input')}
             className="w-full bg-[#315C9D] text-white h-12 rounded-lg text-base font-semibold flex items-center justify-center gap-2"
           >
             {t.cta}

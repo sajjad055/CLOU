@@ -1,10 +1,14 @@
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle, Volume2, ChevronDown, Sun, Glasses, Eye, ScanFace, UserRound, ArrowRight, ArrowLeft, Shield, Check, Loader2 } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { CheckCircle, Volume2, ChevronDown, Sun, Glasses, Eye, ScanFace, UserRound, ArrowRight, ArrowLeft, Shield, Check, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
 import { useLanguage } from '../hooks/useLanguage';
+import type { AadhaarStepId } from '../flows/hrmsFlows';
+import { cifCreate, getAadhaarSegment, getActiveFlow, isHrmsFlow } from '../flows/hrmsFlows';
+import { advanceAadhaarSegment, readJourney } from '../flows/hrmsJourney';
+import { tr } from '../flows/hrmsContent';
 import aadhaarImg from '@/assets/aadhaar.svg';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import faceScanImg from '@/assets/face-scan.svg';
@@ -15,7 +19,22 @@ import successLottie from '@/assets/success.lottie';
 import facePersonImg from '@/assets/face-person.png';
 const FACE_PLACEHOLDER = facePersonImg;
 
-type Step = 'aadhaar-input' | 'aadhaar-otp' | 'face-verification-ready' | 'blink' | 'scanning' | 'verifying' | 'verified' | 'confirm-details' | 'updating-records' | 'success';
+/**
+ * The linear step order this screen has always followed. Every non-HRMS flow
+ * runs exactly this sequence, so `goNext()` reproduces the previous behaviour.
+ */
+const DEFAULT_SEQUENCE: AadhaarStepId[] = [
+  'aadhaar-input',
+  'aadhaar-otp',
+  'confirm-details',
+  'face-verification-ready',
+  'blink',
+  'scanning',
+  'verifying',
+  'verified',
+  'updating-records',
+  'success',
+];
 
 function CTAButton({ onClick, disabled, children }: { onClick?: () => void; disabled?: boolean; children: React.ReactNode }) {
   return (
@@ -33,11 +52,67 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 export function AadhaarVerificationPage() {
   const navigate = useNavigate();
   const [selectedLanguage] = useLanguage();
-  const [step, setStep] = useState<Step>('aadhaar-input');
 
-  // Aadhaar input with masking
-  const [aadhaarDigits, setAadhaarDigits] = useState<string[]>(Array(12).fill(''));
-  const [maskedDigits, setMaskedDigits] = useState<boolean[]>(Array(12).fill(false));
+  // ── HRMS segment selection ────────────────────────────────────────────────
+  // `hrmsFlow` is null for all eight existing flows, so `segment` is null, the
+  // active sequence is DEFAULT_SEQUENCE and every HRMS branch below is dead.
+  const hrmsFlow = useMemo(() => {
+    const active = getActiveFlow();
+    return isHrmsFlow(active) ? active : null;
+  }, []);
+  const journey = useMemo(() => (hrmsFlow ? readJourney(hrmsFlow) : null), [hrmsFlow]);
+  const segment = useMemo(
+    () => (hrmsFlow && journey ? getAadhaarSegment(hrmsFlow, journey.aadhaarSegmentIndex) : null),
+    [hrmsFlow, journey],
+  );
+
+  const sequence = segment?.steps ?? DEFAULT_SEQUENCE;
+  /** HRMS segments only: `updating-records` is relabelled as CIF creation. */
+  const updatingAsCif = segment?.updatingRecordsAs === 'cif';
+  const [step, setStep] = useState<AadhaarStepId>(sequence[0]);
+
+  /** Leave this screen once the active sequence is exhausted. */
+  const exitSegment = () => {
+    if (segment && hrmsFlow) {
+      advanceAadhaarSegment(hrmsFlow);
+      navigate(segment.exitRoute);
+      return;
+    }
+    const flow = localStorage.getItem('activeFlow') || 'ntb-no-ckyc';
+    const dest = (flow === 'ntb-no-ckyc-id' || flow === 'ntb-knows-ckyc-id') ? '/employee-id-upload' : '/loading';
+    navigate(dest);
+  };
+
+  /** Advance one position in the active sequence; exit when there is no next step. */
+  const goNext = () => {
+    const nextStep = sequence[sequence.indexOf(step) + 1];
+    if (nextStep) { setStep(nextStep); return; }
+    exitSegment();
+  };
+
+  /**
+   * Backward jump out of the face scan. In HRMS segments this is the cancel
+   * path: it flags the incomplete authentication so the ready screen can
+   * explain it, and never advances the sequence.
+   */
+  const cancelFaceScan = () => {
+    if (segment) { setFaceCancelled(true); setBlinkDetected(false); setProgress(0); }
+    setStep('face-verification-ready');
+  };
+
+  // Aadhaar input with masking.
+  // HRMS segments that declare `seedAadhaarFromJourney` start with the number
+  // the customer already gave, masked, so no re-entry is ever requested.
+  const seededAadhaar = segment?.seedAadhaarFromJourney
+    ? (journey?.aadhaarNumber ?? '').replace(/\D/g, '').slice(0, 12)
+    : '';
+  const [aadhaarDigits, setAadhaarDigits] = useState<string[]>(() => {
+    const digits = seededAadhaar.split('');
+    return [...digits, ...Array(12 - digits.length).fill('')];
+  });
+  const [maskedDigits, setMaskedDigits] = useState<boolean[]>(() =>
+    Array.from({ length: 12 }, (_, i) => i < seededAadhaar.length),
+  );
   const maskTimers = useRef<NodeJS.Timeout[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputFocused, setInputFocused] = useState(false);
@@ -49,6 +124,13 @@ export function AadhaarVerificationPage() {
   // Face scan
   const [progress, setProgress] = useState(0);
   const [blinkDetected, setBlinkDetected] = useState(false);
+  /** HRMS segments only: the customer left the scan before it completed. */
+  const [faceCancelled, setFaceCancelled] = useState(false);
+
+  // HRMS-only `ckyc-retrieval` progress rows
+  const retrievalSteps = segment?.processing ?? [];
+  const [retrievalIndex, setRetrievalIndex] = useState(0);
+  const [retrievalDone, setRetrievalDone] = useState<string[]>([]);
 
   // Consent
   const [showConsentSheet, setShowConsentSheet] = useState(false);
@@ -122,7 +204,7 @@ export function AadhaarVerificationPage() {
   // Face scan progression
   useEffect(() => {
     if (step === 'blink') {
-      const t = setTimeout(() => { setBlinkDetected(true); setTimeout(() => { setStep('scanning'); setProgress(0); }, 600); }, 2500);
+      const t = setTimeout(() => { setBlinkDetected(true); setTimeout(() => { goNext(); setProgress(0); }, 600); }, 2500);
       return () => clearTimeout(t);
     }
   }, [step]);
@@ -130,26 +212,36 @@ export function AadhaarVerificationPage() {
   useEffect(() => {
     if (step === 'scanning') {
       const id = setInterval(() => {
-        setProgress(p => { if (p >= 100) { clearInterval(id); setTimeout(() => setStep('verifying'), 500); return 100; } return p + 1.5; });
+        setProgress(p => { if (p >= 100) { clearInterval(id); setTimeout(() => goNext(), 500); return 100; } return p + 1.5; });
       }, 60);
       return () => clearInterval(id);
     }
   }, [step]);
 
   useEffect(() => {
-    if (step === 'verifying') { const t = setTimeout(() => setStep('verified'), 2000); return () => clearTimeout(t); }
+    if (step === 'verifying') { const t = setTimeout(() => goNext(), 2000); return () => clearTimeout(t); }
   }, [step]);
   useEffect(() => {
-    if (step === 'verified') { const t = setTimeout(() => setStep('updating-records'), 1500); return () => clearTimeout(t); }
+    if (step === 'verified') { const t = setTimeout(() => goNext(), 1500); return () => clearTimeout(t); }
   }, [step]);
   useEffect(() => {
-    if (step === 'updating-records') { const t = setTimeout(() => setStep('success'), 2000); return () => clearTimeout(t); }
+    if (step === 'updating-records') { const t = setTimeout(() => goNext(), updatingAsCif ? cifCreate.durationMs : 2000); return () => clearTimeout(t); }
   }, [step]);
+
+  // HRMS-only: walk `segment.processing` one row at a time, then advance.
+  useEffect(() => {
+    if (step !== 'ckyc-retrieval') return;
+    const current = retrievalSteps[retrievalIndex];
+    if (!current) { const t = setTimeout(() => goNext(), 400); return () => clearTimeout(t); }
+    const t = setTimeout(() => {
+      setRetrievalDone(prev => [...prev, current.id]);
+      setRetrievalIndex(prev => prev + 1);
+    }, current.durationMs);
+    return () => clearTimeout(t);
+  }, [step, retrievalIndex]);
   useEffect(() => {
     if (step === 'success') {
-      const flow = localStorage.getItem('activeFlow') || 'ntb-no-ckyc';
-      const dest = (flow === 'ntb-no-ckyc-id' || flow === 'ntb-knows-ckyc-id') ? '/employee-id-upload' : '/loading';
-      const t = setTimeout(() => navigate(dest), 1500);
+      const t = setTimeout(() => goNext(), 1500);
       return () => clearTimeout(t);
     }
   }, [step, navigate]);
@@ -357,6 +449,12 @@ export function AadhaarVerificationPage() {
               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="text-center mb-8 w-full">
                 <h1 className="text-xl font-semibold text-[#111827] mb-1">{t.otpTitle}</h1>
                 <p className="text-sm text-[#6b7280]">{t.otpSubtitle}</p>
+                {/* HRMS seeded segments: show the Aadhaar already on file, masked. */}
+                {seededAadhaar.length === 12 && (
+                  <p className="text-sm font-semibold text-[#111827] mt-2">
+                    {t.aadhaarNumLabel}: {`XXXX XXXX ${seededAadhaar.slice(-4)}`}
+                  </p>
+                )}
               </motion.div>
 
               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="w-full mb-6">
@@ -398,7 +496,7 @@ export function AadhaarVerificationPage() {
                   onClick={() => {
                     if (otp.join('').length === 6 && !otpVerifying) {
                       setOtpVerifying(true);
-                      setTimeout(() => { setOtpVerifying(false); setStep('confirm-details'); }, 1200);
+                      setTimeout(() => { setOtpVerifying(false); goNext(); }, 1200);
                     }
                   }}
                 >
@@ -446,8 +544,32 @@ export function AadhaarVerificationPage() {
                 </div>
               </motion.div>
 
+              {/* HRMS segments only: the scan was left before it completed. The
+                  seeded Aadhaar and confirmed details are retained and the
+                  sequence does not advance until Try again is used. */}
+              {segment && faceCancelled && (
+                <div
+                  role="alert"
+                  className="w-full mb-6 rounded-lg border border-[#b3261e]/30 bg-[#b3261e]/5 p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-[#b3261e] flex-shrink-0 mt-0.5" strokeWidth={2.5} aria-hidden="true" />
+                    <p className="text-sm text-[#b3261e] leading-relaxed flex-1">
+                      {tr(selectedLanguage, 'faceRdCancelledMessage')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setFaceCancelled(false); setBlinkDetected(false); setProgress(0); goNext(); }}
+                    className="mt-3 inline-flex items-center gap-2 h-12 px-4 rounded-lg border border-[#315C9D] text-[#315C9D] text-base font-semibold hover:bg-[#315C9D]/5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                  >
+                    <RotateCcw className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
+                    {tr(selectedLanguage, 'faceRdTryAgainBtn')}
+                  </button>
+                </div>
+              )}
+
               <StickyFooter>
-                <CTAButton onClick={() => { setBlinkDetected(false); setStep('blink'); }}>{t.proceedBtn}</CTAButton>
+                <CTAButton onClick={() => { setBlinkDetected(false); setFaceCancelled(false); goNext(); }}>{t.proceedBtn}</CTAButton>
               </StickyFooter>
             </div>
           )}
@@ -458,7 +580,7 @@ export function AadhaarVerificationPage() {
               <div className="relative overflow-hidden bg-[#0f1218] min-h-[100vh] flex flex-col items-center justify-center px-6 py-10">
                 {/* Back button */}
                 <button
-                  onClick={() => setStep('face-verification-ready')}
+                  onClick={cancelFaceScan}
                   aria-label="Go back"
                   className="absolute top-4 left-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                 >
@@ -504,7 +626,7 @@ export function AadhaarVerificationPage() {
               <div className="relative overflow-hidden bg-[#0f1218] min-h-[100vh] flex flex-col items-center justify-center px-6 py-10">
                 {/* Back button */}
                 <button
-                  onClick={() => setStep('face-verification-ready')}
+                  onClick={cancelFaceScan}
                   aria-label="Go back"
                   className="absolute top-4 left-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                 >
@@ -600,7 +722,7 @@ export function AadhaarVerificationPage() {
 
               <StickyFooter>
                 <div className="space-y-3">
-                  <CTAButton onClick={() => setStep('face-verification-ready')}>{t.confirmBtn}</CTAButton>
+                  <CTAButton onClick={() => goNext()}>{t.confirmBtn}</CTAButton>
                   <button onClick={() => navigate(-1)}
                     className="w-full bg-white border border-[#e5e7eb] text-[#111827] h-12 rounded-lg text-base font-semibold hover:bg-[#f9fafb] transition-colors">
                     {t.notMeBtn}
@@ -620,8 +742,55 @@ export function AadhaarVerificationPage() {
                   </motion.div>
                 </div>
               </motion.div>
-              <h2 className="text-xl font-semibold text-[#111827] mb-1">{t.updatingTitle}</h2>
-              <p className="text-sm text-[#6b7280]">{t.updatingSubtitle}</p>
+              <h2 className="text-xl font-semibold text-[#111827] mb-1">
+                {updatingAsCif ? tr(selectedLanguage, 'stepCifCreate') : t.updatingTitle}
+              </h2>
+              {updatingAsCif ? (
+                <div className="flex items-center gap-3 mt-2 px-4 py-3 rounded-lg border border-[#315C9D]/20 bg-[#315C9D]/5">
+                  <Loader2 className="w-5 h-5 text-[#315C9D] animate-spin flex-shrink-0" strokeWidth={2.5} aria-hidden="true" />
+                  <span className="text-sm font-medium text-[#315C9D]">
+                    {selectedLanguage === 'English' ? cifCreate.labelEn : cifCreate.labelTa}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-sm text-[#6b7280]">{t.updatingSubtitle}</p>
+              )}
+            </div>
+          )}
+
+          {/* ── CKYC Retrieval (HRMS segments only) ── */}
+          {step === 'ckyc-retrieval' && (
+            <div className="flex flex-col items-center justify-center min-h-[60vh]">
+              <div className="w-14 h-14 rounded-2xl bg-[#315C9D]/10 flex items-center justify-center mb-6">
+                <Loader2 className="w-7 h-7 text-[#315C9D] animate-spin" strokeWidth={2} aria-hidden="true" />
+              </div>
+              <h2 className="text-xl font-semibold text-[#111827] mb-6 text-center">
+                {tr(selectedLanguage, 'stepCkycByAadhaar')}
+              </h2>
+              <div className="w-full space-y-3" aria-live="polite">
+                {retrievalSteps.map((row, index) => {
+                  const isCompleted = retrievalDone.includes(row.id);
+                  const isActive = retrievalIndex === index && !isCompleted;
+                  if (!isCompleted && !isActive) return null;
+                  return (
+                    <div
+                      key={row.id}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${
+                        isCompleted ? 'bg-[#2da94f]/5 border-[#2da94f]/20' : 'bg-[#315C9D]/5 border-[#315C9D]/20'
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle className="w-5 h-5 text-[#2da94f] flex-shrink-0" strokeWidth={2.5} aria-hidden="true" />
+                      ) : (
+                        <Loader2 className="w-5 h-5 text-[#315C9D] animate-spin flex-shrink-0" strokeWidth={2.5} aria-hidden="true" />
+                      )}
+                      <span className={`text-sm font-medium ${isCompleted ? 'text-[#2da94f]' : 'text-[#315C9D]'}`}>
+                        {selectedLanguage === 'English' ? row.labelEn : row.labelTa}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -693,7 +862,7 @@ export function AadhaarVerificationPage() {
               </div>
 
               <div className="px-6 py-5 border-t border-[#e5e7eb]">
-                <CTAButton onClick={() => { setConsent(true); setShowConsentSheet(false); setStep('aadhaar-otp'); }}>
+                <CTAButton onClick={() => { setConsent(true); setShowConsentSheet(false); goNext(); }}>
                   {modalLanguage === 'Tamil' ? content.Tamil.agreeAndContinue : content.English.agreeAndContinue}
                 </CTAButton>
               </div>

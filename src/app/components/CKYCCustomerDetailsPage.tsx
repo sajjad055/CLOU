@@ -1,10 +1,13 @@
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { ArrowRight, ShieldCheck, Loader2, CheckCircle, Lock, User, CreditCard, Fingerprint, Users, MapPin } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Loader2, CheckCircle, Info, Lock, User, CreditCard, Fingerprint, Users, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
 import { useLanguage } from '../hooks/useLanguage';
+import { getCkycDetailsConfig, isHrmsFlow, type CkycDetailsConfig } from '../flows/hrmsFlows';
+import { resolveDisplayPan } from '../flows/hrmsJourney';
+import { tr } from '../flows/hrmsContent';
 
 /**
  * CKYC Customer Details review screen.
@@ -56,6 +59,19 @@ interface FlowConfig {
   steps: ProcessingStep[];
 }
 
+/**
+ * Config as actually consumed by this screen. `ckycFirst` is an existing-flow
+ * concern and the two HRMS-only fields (`dedupeResult`, `panSource`) are
+ * `undefined` for every existing flow, so their render blocks are omitted.
+ */
+type ResolvedConfig = {
+  ckycFirst?: boolean;
+  next: string;
+  steps: ProcessingStep[];
+  dedupeResult?: CkycDetailsConfig['dedupeResult'];
+  panSource?: CkycDetailsConfig['panSource'];
+};
+
 const flowConfigs: Record<string, FlowConfig> = {
   // ── Knows CKYC (ckyc-first): review then PAN review, no dedupe loading here ──
   'ntb-knows-ckyc': { ckycFirst: true, next: '/pan-prefilled', steps: [] },
@@ -76,7 +92,10 @@ export function CKYCCustomerDetailsPage() {
   const [phase, setPhase] = useState<Phase>('review');
 
   const flow = (typeof window !== 'undefined' && localStorage.getItem('activeFlow')) || 'ntb-no-ckyc';
-  const config = flowConfigs[flow] || flowConfigs['ntb-no-ckyc'];
+  // Existing keys resolve on the first lookup, so the eight existing flows
+  // never reach the HRMS config at all.
+  const config: ResolvedConfig =
+    flowConfigs[flow] ?? getCkycDetailsConfig(flow) ?? flowConfigs['ntb-no-ckyc'];
 
   // Processing state (pan-first flows only)
   const [currentStep, setCurrentStep] = useState(0);
@@ -138,9 +157,26 @@ export function CKYCCustomerDetailsPage() {
     return () => clearTimeout(timer);
   }, [phase, currentStep, config, navigate]);
 
-  const detailRows = [
+  // ── PAN row source (HRMS flows only) ──
+  // `null` for the eight existing flows, so the CKYC record PAN renders as today.
+  const hrmsPan = isHrmsFlow(flow) ? resolveDisplayPan(flow) : null;
+  const panValue = hrmsPan === null ? CKYC_DATA.pan : hrmsPan;
+  const panNote =
+    hrmsPan === '' && config.panSource === 'none'
+      ? tr(selectedLanguage, 'panNotAvailableLabel')
+      : hrmsPan === '' && config.panSource === 'journey'
+        ? tr(selectedLanguage, 'panNotProvidedLabel')
+        : undefined;
+
+  const detailRows: Array<{
+    icon: typeof User;
+    label: string;
+    value: string;
+    mono?: boolean;
+    note?: string;
+  }> = [
     { icon: User, label: t.nameLabel, value: CKYC_DATA.name },
-    { icon: CreditCard, label: t.panLabel, value: CKYC_DATA.pan, mono: true },
+    { icon: CreditCard, label: t.panLabel, value: panValue, mono: true, note: panNote },
     { icon: Fingerprint, label: t.aadhaarLabel, value: CKYC_DATA.aadhaar, mono: true },
     { icon: Users, label: t.fatherLabel, value: CKYC_DATA.fatherName },
     { icon: MapPin, label: t.addressLabel, value: CKYC_DATA.address },
@@ -167,6 +203,31 @@ export function CKYCCustomerDetailsPage() {
                 <p className="text-sm text-[#6b7280] leading-relaxed">{t.subtitle}</p>
               </motion.div>
 
+              {/* ── Dedupe banner (HRMS flows only) ──
+                  `config.dedupeResult` is undefined for the eight existing flows,
+                  so this block is omitted entirely for them. Icon + text, always
+                  visible: no hover, focus or other interaction required. */}
+              {config.dedupeResult && (
+                <div
+                  className={`rounded-xl border p-4 flex items-start gap-3 mb-4 ${
+                    config.dedupeResult === 'etb'
+                      ? 'bg-[#2da94f]/5 border-[#2da94f]/25'
+                      : 'bg-[#eef3fa] border-[#315C9D]/20'
+                  }`}
+                >
+                  {config.dedupeResult === 'etb' ? (
+                    <CheckCircle className="w-5 h-5 text-[#15803d] flex-shrink-0 mt-0.5" strokeWidth={2.5} aria-hidden="true" />
+                  ) : (
+                    <Info className="w-5 h-5 text-[#315C9D] flex-shrink-0 mt-0.5" strokeWidth={2.5} aria-hidden="true" />
+                  )}
+                  <p className="text-sm font-medium text-[#111827] leading-relaxed">
+                    {config.dedupeResult === 'etb'
+                      ? tr(selectedLanguage, 'dedupeEtbBanner')
+                      : tr(selectedLanguage, 'dedupeNtbBanner')}
+                  </p>
+                </div>
+              )}
+
               {/* Details card */}
               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}
                 className="bg-[#f9fafb] border border-[#e5e7eb] rounded-xl overflow-hidden mb-4">
@@ -179,7 +240,13 @@ export function CKYCCustomerDetailsPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-[11px] font-semibold text-[#666666] uppercase tracking-wide mb-0.5">{row.label}</p>
-                        <p className={`text-sm font-semibold text-[#212121] leading-snug ${row.mono ? 'font-mono tracking-wide' : ''}`}>{row.value}</p>
+                        {row.value !== '' && (
+                          <p className={`text-sm font-semibold text-[#212121] leading-snug ${row.mono ? 'font-mono tracking-wide' : ''}`}>{row.value}</p>
+                        )}
+                        {/* HRMS-only: explanatory label when the resolved value is empty */}
+                        {row.note && (
+                          <p className="text-sm font-medium text-[#6b7280] leading-snug">{row.note}</p>
+                        )}
                       </div>
                     </div>
                   );

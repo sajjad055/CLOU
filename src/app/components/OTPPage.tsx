@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Shield, ArrowRight, Pencil, Loader2 } from 'lucide-react';
+import { Shield, ArrowRight, Pencil, Loader2, AlertCircle } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
 import { useLanguage } from '../hooks/useLanguage';
+import { getActiveFlow, hrmsNextRoute } from '../flows/hrmsFlows';
+import { tr } from '../flows/hrmsContent';
 
 export function OTPPage() {
   const navigate = useNavigate();
@@ -13,7 +15,15 @@ export function OTPPage() {
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [otpError, setOtpError] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  /**
+   * `/ckyc-customer-details` for the five HRMS flows, `null` for the eight
+   * existing flows and for any unrecognised value — so existing flows never
+   * take the HRMS branch below.
+   */
+  const hrmsNext = hrmsNextRoute(getActiveFlow(), 'ckyc-otp');
 
   useEffect(() => { inputRefs.current[0]?.focus(); }, []);
 
@@ -69,6 +79,20 @@ export function OTPPage() {
   };
 
   const handleVerify = () => {
+    // HRMS branch, checked first. Accepts any six-digit value.
+    if (hrmsNext) {
+      if (verifying) return;
+      if (otp.join('').replace(/\D/g, '').length !== 6) {
+        setOtpError(true);
+        return;
+      }
+      setOtpError(false);
+      setVerifying(true);
+      setTimeout(() => navigate(hrmsNext), 1200);
+      return;
+    }
+
+    // ── existing behaviour, unchanged ──
     if (otp.join('') === '123456' && !verifying) {
       setVerifying(true);
       setTimeout(() => navigate('/ckyc-consent'), 1200);
@@ -124,11 +148,21 @@ export function OTPPage() {
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(index, e)}
                     onPaste={handlePaste}
+                    aria-label={`OTP digit ${index + 1}`}
+                    aria-describedby={hrmsNext && otpError ? 'otp-error' : undefined}
+                    aria-invalid={hrmsNext && otpError ? true : undefined}
                     className="w-full h-14 text-center text-xl font-bold bg-transparent border border-[#e5e7eb] rounded-lg focus:border-[#254576] focus:ring-1 focus:ring-[#254576]/20 focus:outline-none transition-all text-[#212121]"
                   />
                 </div>
               ))}
             </div>
+
+            {hrmsNext && otpError && (
+              <p id="otp-error" role="alert" className="flex items-start gap-1.5 text-sm text-[#b42318] mb-4">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" strokeWidth={2} aria-hidden="true" />
+                <span>{tr(selectedLanguage, 'otpShortError')}</span>
+              </p>
+            )}
 
             <div className="flex items-center justify-center text-sm">
               {canResend ? (
@@ -162,7 +196,7 @@ export function OTPPage() {
       <StickyFooter>
         <button
           onClick={handleVerify}
-          disabled={!isOtpComplete || verifying}
+          disabled={hrmsNext ? verifying : !isOtpComplete || verifying}
           className="w-full bg-[#315C9D] text-white h-12 rounded-lg text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
         >
           {verifying ? (
