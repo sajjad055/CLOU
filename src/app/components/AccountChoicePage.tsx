@@ -489,14 +489,6 @@ function AccountChoice({ flow }: { flow: HrmsFlowId }) {
       <main ref={mainRef} className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto px-4 pt-8 pb-40">
 
-          <motion.div {...enter(0.05)} className="flex justify-center mb-5">
-            <img
-              src={iobLogo}
-              alt={tr(language, 'hrmsBankName')}
-              className="h-[29px] w-auto object-contain"
-            />
-          </motion.div>
-
           <motion.div {...enter(0.1)} className="text-center mb-8">
             <h1 id="account-choice-title" className="text-xl font-semibold text-[#111827] mb-1">
               {tr(language, 'accountChoiceTitle')}
@@ -539,7 +531,9 @@ function AccountChoice({ flow }: { flow: HrmsFlowId }) {
                     tabIndex={choice === null ? (index === 0 ? 0 : -1) : isSelected ? 0 : -1}
                     onClick={() => select(option.value)}
                     onKeyDown={(event) => handleKeyDown(event, index)}
-                    className={`w-full text-left p-4 flex items-center gap-3 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] disabled:cursor-not-allowed ${
+                    // Height is bounded to 64px and floored at 56px, so the row
+                    // stays a 44px-plus target without the logo stretching it.
+                    className={`w-full text-left px-4 py-3 min-h-[56px] max-h-16 flex items-center gap-3 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] disabled:cursor-not-allowed ${
                       isSelected ? 'bg-[#2da94f]/5' : 'bg-white hover:bg-[#f9fafb]'
                     }`}
                   >
@@ -559,9 +553,21 @@ function AccountChoice({ flow }: { flow: HrmsFlowId }) {
                       )}
                     </span>
 
-                    <span className="text-sm font-semibold text-[#111827] min-w-0">
+                    <span className="flex-1 min-w-0 text-sm font-semibold text-[#111827]">
                       {option.label}
                     </span>
+
+                    {/* Decorative — the label beside it already names the bank —
+                        so it carries no alt text and is hidden from assistive
+                        tech. Capped in height so the row cannot outgrow 64px. */}
+                    {option.value === 'has-account' && (
+                      <img
+                        src={iobLogo}
+                        alt=""
+                        aria-hidden="true"
+                        className="h-5 w-auto max-w-[76px] object-contain flex-shrink-0"
+                      />
+                    )}
                   </button>
 
                   <AnimatePresence initial={false}>
