@@ -109,7 +109,12 @@ export interface CkycDetailsConfig {
   /** Where the displayed PAN comes from. `'none'` renders a blank PAN with an explanatory label. */
   panSource: 'hrms' | 'account-record' | 'journey' | 'none';
   next: string;
-  /** Post-review processing. Empty for every HRMS flow — dedupe already ran earlier. */
+  /**
+   * Post-review processing. The dedupe already ran earlier in every HRMS flow,
+   * so this carries only the eligibility check and offers fetch — and only on
+   * the flows whose `next` is the offers screen. The flows that continue to
+   * Aadhaar leave it empty and get their loading screen later, via `/loading`.
+   */
   steps: ProcessingStep[];
 }
 
@@ -210,6 +215,25 @@ export const ckycByAadhaar: ProcessingStep = {
   durationMs: 2000,
 };
 
+/**
+ * Credit eligibility check, run after the CKYC review on the flows that go
+ * straight to the offers screen from there.
+ */
+export const breCheck: ProcessingStep = {
+  id: 'bre',
+  labelEn: 'Running credit eligibility check…',
+  labelTa: 'கடன் தகுதி சோதனை நடைபெறுகிறது…',
+  durationMs: 2200,
+};
+
+/** Offers fetch, the last step before the sanctioned-offers screen. */
+export const offersFetch: ProcessingStep = {
+  id: 'offers-fetch',
+  labelEn: 'Fetching your sanctioned offers…',
+  labelTa: 'உங்கள் அனுமதிக்கப்பட்ட சலுகைகளைப் பெறுகிறது…',
+  durationMs: 1800,
+};
+
 /** CIF creation, rendered by `updating-records` when `updatingRecordsAs === 'cif'`. */
 export const cifCreate: ProcessingStep = {
   id: 'cif-create',
@@ -227,6 +251,8 @@ export const HRMS_PROCESSING_STEPS: Record<string, ProcessingStep> = {
   [ckycVerify.id]: ckycVerify,
   [accountPanAbsent.id]: accountPanAbsent,
   [ckycByAadhaar.id]: ckycByAadhaar,
+  [breCheck.id]: breCheck,
+  [offersFetch.id]: offersFetch,
   [cifCreate.id]: cifCreate,
 };
 
@@ -281,7 +307,9 @@ const hrmsPanEtb: HrmsFlowDefinition = {
     dedupeResult: 'etb',
     panSource: 'hrms',
     next: '/sanctioned-offers',
-    steps: [],
+    // Straight to offers from here, so the eligibility check and offers fetch
+    // run on this screen rather than the offers appearing instantly.
+    steps: [breCheck, offersFetch],
   },
 };
 
@@ -399,7 +427,9 @@ const hrmsNopanEtb: HrmsFlowDefinition = {
     dedupeResult: 'etb',
     panSource: 'account-record',
     next: '/sanctioned-offers',
-    steps: [],
+    // Straight to offers from here, so the eligibility check and offers fetch
+    // run on this screen rather than the offers appearing instantly.
+    steps: [breCheck, offersFetch],
   },
 };
 
@@ -568,7 +598,9 @@ const hrmsNopanEtbNopan: HrmsFlowDefinition = {
     dedupeResult: 'etb',
     panSource: 'none',
     next: '/sanctioned-offers',
-    steps: [],
+    // Straight to offers from here, so the eligibility check and offers fetch
+    // run on this screen rather than the offers appearing instantly.
+    steps: [breCheck, offersFetch],
   },
 };
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { Code2, X, Home, FileText, Phone, Lock, CheckCircle, Loader2, CreditCard, Settings, Sparkles, ShieldCheck, Fingerprint, FileCheck, Smartphone, AlertCircle } from 'lucide-react';
+import { Code2, X, Home, FileText, Phone, Lock, CheckCircle, Loader2, CreditCard, Settings, Sparkles, ShieldCheck, Fingerprint, FileCheck, Smartphone, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { HRMS_FLOW_IDS, HRMS_FLOWS } from '../flows/hrmsFlows';
 import { resetJourney } from '../flows/hrmsJourney';
@@ -70,8 +70,16 @@ const routes: PageRoute[] = [
   { path: '/upi-connection', name: 'UPI Setup', icon: Code2, description: 'Connect to UPI apps' },
 ];
 
+/**
+ * How many entries stay visible before the "View all" toggle. Five keeps the
+ * panel to the HRMS journeys, which are what we demo day to day; everything
+ * older sits one tap away.
+ */
+const VISIBLE_COUNT = 5;
+
 export function DevPreview() {
   const [isOpen, setIsOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [flowError, setFlowError] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -114,6 +122,9 @@ export function DevPreview() {
     }
     setIsOpen(false);
   };
+
+  const visibleRoutes = showAll ? routes : routes.slice(0, VISIBLE_COUNT);
+  const hiddenCount = routes.length - VISIBLE_COUNT;
 
   return (
     <>
@@ -185,7 +196,7 @@ export function DevPreview() {
 
               {/* Routes List */}
               <div className="p-4 space-y-2">
-                {routes.map((route, index) => {
+                {visibleRoutes.map((route, index) => {
                   const IconComponent = route.icon;
                   const isActive = location.pathname === route.path;
 
@@ -228,6 +239,27 @@ export function DevPreview() {
                     </motion.button>
                   );
                 })}
+
+                {hiddenCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAll(!showAll)}
+                    aria-expanded={showAll}
+                    className="w-full h-12 flex items-center justify-center gap-2 rounded-2xl border-2 border-gray-200 bg-white text-sm font-bold text-gray-700 transition-colors hover:border-purple-200 hover:text-purple-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                  >
+                    {showAll ? (
+                      <>
+                        Show less
+                        <ChevronUp className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
+                      </>
+                    ) : (
+                      <>
+                        {`View all (${hiddenCount} more)`}
+                        <ChevronDown className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
 
               {/* Footer */}
