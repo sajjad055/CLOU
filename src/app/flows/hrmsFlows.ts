@@ -84,6 +84,7 @@ export type AadhaarStepId =
   | 'scanning'
   | 'verifying'
   | 'verified'
+  | 'ckyc-consent-otp' // NEW, HRMS-only: CKYC-download consent confirmed by OTP
   | 'ckyc-retrieval' // NEW, HRMS-only
   | 'updating-records'
   | 'success';
@@ -411,7 +412,7 @@ const hrmsNopanNtb: HrmsFlowDefinition = {
   id: 'hrms-nopan-ntb',
   labelEn: '▶ HRMS No PAN, NTB (no IOB account)',
   descriptionEn:
-    'HRMS fetch → HRMS details → Account choice → PAN + Aadhaar → Aadhaar OTP → CKYC by Aadhaar → OTP → CKYC details → Face → CIF → Offers',
+    'HRMS fetch → HRMS details → Account choice → PAN + Aadhaar → Aadhaar OTP → Aadhaar details + CKYC consent → CKYC OTP → CKYC by Aadhaar → CKYC details → Face → CIF → Offers',
   entryRoute: '/hrms-details',
   hrmsPanPresent: false,
   dedupe: 'ntb',
@@ -434,13 +435,16 @@ const hrmsNopanNtb: HrmsFlowDefinition = {
       altNext: '/hrms-pan-aadhaar', // "I don't have an IOB account"
     },
     { id: 'pan-aadhaar-entry', route: '/hrms-pan-aadhaar', next: '/aadhaar-verification' },
-    // Segment 0 — Aadhaar OTP then CKYC retrieval by Aadhaar.
+    // Segment 0 — Aadhaar OTP, Aadhaar details, CKYC consent + OTP, then CKYC
+    // retrieval by Aadhaar. The confirming OTP is taken inside the segment.
     {
       id: 'aadhaar',
       route: '/aadhaar-verification',
       processing: [ckycByAadhaar],
-      next: '/otp-verification',
+      next: '/ckyc-customer-details',
     },
+    // Retained so `/otp-verification` stays resolvable if opened directly; the
+    // segment no longer routes through it.
     { id: 'ckyc-otp', route: '/otp-verification', next: '/ckyc-customer-details' },
     { id: 'ckyc-details', route: '/ckyc-customer-details', next: '/aadhaar-verification' },
     // Segment 1 — Face RD then CIF creation.
@@ -456,10 +460,15 @@ const hrmsNopanNtb: HrmsFlowDefinition = {
   aadhaarSegments: [
     {
       id: 'otp-then-ckyc',
-      steps: ['aadhaar-otp', 'ckyc-retrieval'],
+      // The Aadhaar is verified by OTP, its details are shown, and the CKYC
+      // download is consented to and confirmed by a second OTP on that details
+      // screen — so the record is only pulled after the customer authorised it.
+      steps: ['aadhaar-otp', 'confirm-details', 'ckyc-consent-otp', 'ckyc-retrieval'],
       seedAadhaarFromJourney: true,
       processing: [ckycByAadhaar],
-      exitRoute: '/otp-verification',
+      // The confirming OTP now happens inside the segment, so the separate hop
+      // to the shared OTP screen is no longer needed.
+      exitRoute: '/ckyc-customer-details',
     },
     {
       id: 'face-only',
@@ -493,7 +502,7 @@ const hrmsNopanEtbNopan: HrmsFlowDefinition = {
   id: 'hrms-nopan-etb-nopan',
   labelEn: '▶ HRMS No PAN, ETB, account holds no PAN',
   descriptionEn:
-    'HRMS fetch → HRMS details → Account choice → Account number → No PAN found → Aadhaar + OTP → CKYC by Aadhaar → OTP → CKYC details → Offers',
+    'HRMS fetch → HRMS details → Account choice → Account number → No PAN found → Aadhaar + OTP → Aadhaar details + CKYC consent → CKYC OTP → CKYC by Aadhaar → CKYC details → Offers',
   entryRoute: '/hrms-details',
   hrmsPanPresent: false,
   dedupe: 'etb',
@@ -527,13 +536,16 @@ const hrmsNopanEtbNopan: HrmsFlowDefinition = {
       processing: [accountPanAbsent],
       next: '/aadhaar-verification',
     },
-    // Segment 0 — Aadhaar entry, Aadhaar OTP, then CKYC retrieval by Aadhaar.
+    // Segment 0 — Aadhaar entry, Aadhaar OTP, Aadhaar details, CKYC consent +
+    // OTP, then CKYC retrieval by Aadhaar.
     {
       id: 'aadhaar',
       route: '/aadhaar-verification',
       processing: [ckycByAadhaar],
-      next: '/otp-verification',
+      next: '/ckyc-customer-details',
     },
+    // Retained so `/otp-verification` stays resolvable if opened directly; the
+    // segment no longer routes through it.
     { id: 'ckyc-otp', route: '/otp-verification', next: '/ckyc-customer-details' },
     { id: 'ckyc-details', route: '/ckyc-customer-details', next: '/sanctioned-offers' },
     { id: 'offers', route: '/sanctioned-offers', next: null },
@@ -541,10 +553,15 @@ const hrmsNopanEtbNopan: HrmsFlowDefinition = {
   aadhaarSegments: [
     {
       id: 'entry-otp-ckyc',
-      steps: ['aadhaar-input', 'aadhaar-otp', 'ckyc-retrieval'],
+      // Same order as flow 4's first segment, with the Aadhaar entry in front:
+      // verify by OTP, show the details, take CKYC-download consent there and
+      // confirm it by OTP, and only then pull the record.
+      steps: ['aadhaar-input', 'aadhaar-otp', 'confirm-details', 'ckyc-consent-otp', 'ckyc-retrieval'],
       seedAadhaarFromJourney: false,
       processing: [ckycByAadhaar],
-      exitRoute: '/otp-verification',
+      // The confirming OTP now happens inside the segment, so the separate hop
+      // to the shared OTP screen is no longer needed.
+      exitRoute: '/ckyc-customer-details',
     },
   ],
   ckycDetails: {

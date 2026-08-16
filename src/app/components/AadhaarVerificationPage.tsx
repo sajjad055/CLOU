@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { CheckCircle, Volume2, ChevronDown, Sun, Glasses, Eye, ScanFace, UserRound, ArrowRight, ArrowLeft, Shield, Check, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
+import { BottomSheet } from './BottomSheet';
 import { useLanguage } from '../hooks/useLanguage';
 import type { AadhaarStepId } from '../flows/hrmsFlows';
-import { cifCreate, getAadhaarSegment, getActiveFlow, isHrmsFlow } from '../flows/hrmsFlows';
+import { HRMS_EMPLOYEE, cifCreate, getAadhaarSegment, getActiveFlow, isHrmsFlow } from '../flows/hrmsFlows';
 import { advanceAadhaarSegment, readJourney } from '../flows/hrmsJourney';
 import { tr } from '../flows/hrmsContent';
 import aadhaarImg from '@/assets/aadhaar.svg';
@@ -69,7 +70,16 @@ export function AadhaarVerificationPage() {
   const sequence = segment?.steps ?? DEFAULT_SEQUENCE;
   /** HRMS segments only: `updating-records` is relabelled as CIF creation. */
   const updatingAsCif = segment?.updatingRecordsAs === 'cif';
+  /**
+   * HRMS segments that go on to download a CKYC record with this Aadhaar. Only
+   * those segments declare `ckyc-consent-otp`, so this is false for every one of
+   * the eight existing flows (whose `segment` is null and whose sequence is
+   * DEFAULT_SEQUENCE) and for the segments that never touch CKYC. Every branch
+   * added for the CKYC consent hangs off this flag.
+   */
+  const needsCkycConsent = segment?.steps.includes('ckyc-consent-otp') ?? false;
   const [step, setStep] = useState<AadhaarStepId>(sequence[0]);
+  const reduceMotion = useReducedMotion();
 
   /** Leave this screen once the active sequence is exhausted. */
   const exitSegment = () => {
@@ -120,6 +130,16 @@ export function AadhaarVerificationPage() {
   // OTP
   const [otp, setOtp] = useState(['1', '2', '3', '4', '5', '6']);
   const [resendTimer, setResendTimer] = useState(30);
+
+  // CKYC-download OTP — deliberately separate state from the Aadhaar OTP above,
+  // so the two codes, their resend timers and their verifying flags never share
+  // a value. Used only by the `ckyc-consent-otp` step.
+  const [ckycOtp, setCkycOtp] = useState(['1', '2', '3', '4', '5', '6']);
+  const [ckycResendTimer, setCkycResendTimer] = useState(30);
+  const [ckycOtpVerifying, setCkycOtpVerifying] = useState(false);
+  /** CKYC-download consent, taken inline on the `confirm-details` step. */
+  const [ckycConsent, setCkycConsent] = useState(false);
+  const [showCkycConsentSheet, setShowCkycConsentSheet] = useState(false);
 
   // Face scan
   const [progress, setProgress] = useState(0);
@@ -201,6 +221,14 @@ export function AadhaarVerificationPage() {
     return () => clearInterval(t);
   }, [step, resendTimer]);
 
+  // CKYC-download OTP resend timer, on its own countdown.
+  useEffect(() => {
+    if (step !== 'ckyc-consent-otp') return;
+    if (ckycResendTimer <= 0) return;
+    const t = setInterval(() => setCkycResendTimer(p => p - 1), 1000);
+    return () => clearInterval(t);
+  }, [step, ckycResendTimer]);
+
   // Face scan progression
   useEffect(() => {
     if (step === 'blink') {
@@ -260,8 +288,11 @@ export function AadhaarVerificationPage() {
       privacyTitle: 'Your Data is Secure',
       privacyBody: 'Your Aadhaar is encrypted and used only for identity verification.',
       consentTextFull: "I agree and authorize Indian Overseas Bank to fetch my name, date of birth and photograph from UIDAI, limited to authenticating myself with Aadhaar based authentication system for identity verification in adherence to performing e-KYC.\n\nI understand that Indian Overseas Bank will authenticate my identity through the Aadhaar authentication system for personal loans and/or for other purposes, or as authorised under the Aadhaar Act, 2016.\n\nI understand that Indian Overseas Bank shall ensure security and confidentiality of my personal identity data and prohibit its use other than for submission to the Central Identities Data Repository (CIDR) for authentication.\n\nI hereby authorize Indian Overseas Bank to verify and authenticate using the Aadhaar number provided.",
+      /** The inline declaration next to the CTA. Kept to two lines; the full
+       *  text lives behind Read more, which is now purely informational. */
+      consentShort: 'I authorise Indian Overseas Bank to verify my identity using Aadhaar e-KYC.',
+      readMore: 'Read more',
       modalConsentTitle: 'Aadhaar Consent',
-      agreeAndContinue: 'Accept & Continue',
       faceReadyTitle: 'Proceed to Face Verification',
       faceReadySubtitle: 'Your face will be matched against your Aadhaar photo',
       instruction1: 'Position yourself in a room with good lighting',
@@ -286,8 +317,6 @@ export function AadhaarVerificationPage() {
       dobLabel: 'Date of Birth',
       addressLabel: 'Address',
       aadhaarNumLabel: 'Aadhaar Number',
-      confirmBtn: "Confirm & Continue",
-      notMeBtn: 'Not Me',
       updatingTitle: 'Updating Records',
       updatingSubtitle: 'Please wait while we update your information…',
     },
@@ -304,8 +333,9 @@ export function AadhaarVerificationPage() {
       privacyTitle: 'உங்கள் தரவு பாதுகாப்பானது',
       privacyBody: 'உங்கள் ஆதார் மறையாக்கம் செய்யப்பட்டது மற்றும் அடையாள சரிபார்ப்புக்கு மட்டுமே பயன்படுத்தப்படும்.',
       consentTextFull: "e-KYC ஐ செய்வதில் இணங்கி அடையாள சரிபார்ப்புக்காக UIDAI இலிருந்து எனது பெயர், பிறந்த தேதி மற்றும் புகைப்படத்தைப் பெற இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் ஒப்புக்கொள்கிறேன்.",
+      consentShort: 'ஆதார் e-KYC மூலம் எனது அடையாளத்தைச் சரிபார்க்க இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
+      readMore: 'மேலும் படிக்க',
       modalConsentTitle: 'ஆதார் சம்மதம்',
-      agreeAndContinue: 'ஏற்று தொடரவும்',
       faceReadyTitle: 'முக சரிபார்ப்புக்கு தொடரவும்',
       faceReadySubtitle: 'உங்கள் முகம் உங்கள் ஆதார் புகைப்படத்துடன் பொருத்தப்படும்',
       instruction1: 'நல்ல வெளிச்சம் உள்ள அறையில் உங்களை நிலைநிறுத்தவும்',
@@ -330,8 +360,6 @@ export function AadhaarVerificationPage() {
       dobLabel: 'பிறந்த தேதி',
       addressLabel: 'முகவரி',
       aadhaarNumLabel: 'ஆதார் எண்',
-      confirmBtn: "உறுதிப்படுத்தி தொடரவும்",
-      notMeBtn: 'நான் அல்ல',
       updatingTitle: 'பதிவுகள் புதுப்பிக்கப்படுகின்றன',
       updatingSubtitle: 'உங்கள் தகவல்களை புதுப்பிக்கும்போது காத்திருக்கவும்…',
     }
@@ -429,7 +457,44 @@ export function AadhaarVerificationPage() {
               </motion.div>
 
               <StickyFooter>
-                <CTAButton disabled={rawAadhaar.length !== 12} onClick={() => { if (rawAadhaar.length === 12) setShowConsentSheet(true); }}>
+                {/* Consent is taken here, inline, rather than in a sheet the
+                    customer has to clear to make progress. The button wraps only
+                    the box so "Read more" can live in the text flow — a button
+                    inside a button is invalid HTML. */}
+                <div className="mb-3 flex items-start gap-3">
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={consent}
+                    aria-labelledby="aadhaar-consent-label"
+                    onClick={() => setConsent(!consent)}
+                    className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                  >
+                    <span
+                      className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
+                        consent ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
+                      }`}
+                    >
+                      {consent && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
+                    </span>
+                  </button>
+
+                  <p className="text-[12px] text-[#6b7280] leading-relaxed">
+                    <span id="aadhaar-consent-label">{t.consentShort}</span>{' '}
+                    <button
+                      type="button"
+                      onClick={() => setShowConsentSheet(true)}
+                      className="text-[12px] font-semibold text-[#315C9D] underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                    >
+                      {t.readMore}
+                    </button>
+                  </p>
+                </div>
+
+                <CTAButton
+                  disabled={rawAadhaar.length !== 12 || !consent}
+                  onClick={() => { if (rawAadhaar.length === 12 && consent) goNext(); }}
+                >
                   {t.continueBtn}
                   <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
                 </CTAButton>
@@ -449,12 +514,6 @@ export function AadhaarVerificationPage() {
               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="text-center mb-8 w-full">
                 <h1 className="text-xl font-semibold text-[#111827] mb-1">{t.otpTitle}</h1>
                 <p className="text-sm text-[#6b7280]">{t.otpSubtitle}</p>
-                {/* HRMS seeded segments: show the Aadhaar already on file, masked. */}
-                {seededAadhaar.length === 12 && (
-                  <p className="text-sm font-semibold text-[#111827] mt-2">
-                    {t.aadhaarNumLabel}: {`XXXX XXXX ${seededAadhaar.slice(-4)}`}
-                  </p>
-                )}
               </motion.div>
 
               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="w-full mb-6">
@@ -690,12 +749,6 @@ export function AadhaarVerificationPage() {
           {/* ── Confirm Details ── */}
           {step === 'confirm-details' && (
             <div className="flex flex-col items-center">
-              <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-8">
-                <div className="w-[84px] h-[84px] rounded-full bg-[#2da94f]/10 flex items-center justify-center">
-                  <CheckCircle className="w-10 h-10 text-[#2da94f]" strokeWidth={2} />
-                </div>
-              </motion.div>
-
               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="text-center mb-6 w-full">
                 <h1 className="text-xl font-semibold text-[#111827] mb-1">{t.confirmTitle}</h1>
                 <p className="text-sm text-[#6b7280]">{t.confirmSubtitle}</p>
@@ -721,13 +774,56 @@ export function AadhaarVerificationPage() {
               </motion.div>
 
               <StickyFooter>
-                <div className="space-y-3">
-                  <CTAButton onClick={() => goNext()}>{t.confirmBtn}</CTAButton>
-                  <button onClick={() => navigate(-1)}
-                    className="w-full bg-white border border-[#e5e7eb] text-[#111827] h-12 rounded-lg text-base font-semibold hover:bg-[#f9fafb] transition-colors">
-                    {t.notMeBtn}
-                  </button>
-                </div>
+                {/* CKYC-download consent, taken here because this is the screen
+                    that has the verified Aadhaar the download will run on. Only
+                    the segments that go on to `ckyc-retrieval` ask for it; every
+                    other flow renders nothing here and keeps the CTA ungated.
+                    Single declaration, so it sits inline: the button wraps only
+                    the box, and "Read more" is a sibling in the text flow. */}
+                {needsCkycConsent && (
+                  <div className="mb-3 flex items-start gap-3">
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={ckycConsent}
+                      aria-labelledby="ckyc-download-consent-label"
+                      onClick={() => setCkycConsent(!ckycConsent)}
+                      className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                    >
+                      <span
+                        className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
+                          ckycConsent ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
+                        }`}
+                      >
+                        {ckycConsent && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
+                      </span>
+                    </button>
+
+                    <p className="text-[12px] text-[#6b7280] leading-relaxed">
+                      <span id="ckyc-download-consent-label">{tr(selectedLanguage, 'ckycDownloadConsentText')}</span>{' '}
+                      <button
+                        type="button"
+                        onClick={() => setShowCkycConsentSheet(true)}
+                        className="text-[12px] font-semibold text-[#315C9D] underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                      >
+                        {tr(selectedLanguage, 'panAadhaarReadMore')}
+                      </button>
+                    </p>
+                  </div>
+                )}
+
+                <CTAButton
+                  disabled={needsCkycConsent && !ckycConsent}
+                  onClick={() => {
+                    // Guard as well as disable, so a click that slips past
+                    // `disabled` cannot start the CKYC download unconsented.
+                    if (needsCkycConsent && !ckycConsent) return;
+                    goNext();
+                  }}
+                >
+                  {t.continueBtn}
+                  <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
+                </CTAButton>
               </StickyFooter>
             </div>
           )}
@@ -755,6 +851,114 @@ export function AadhaarVerificationPage() {
               ) : (
                 <p className="text-sm text-[#6b7280]">{t.updatingSubtitle}</p>
               )}
+            </div>
+          )}
+
+          {/* ── CKYC Download OTP (HRMS segments that fetch CKYC only) ──
+              Same shape as the Aadhaar OTP step above, on its own state, and
+              headed so it reads as authorising the download rather than
+              re-verifying the Aadhaar. Any six digits pass: no backend. */}
+          {step === 'ckyc-consent-otp' && (
+            <div className="flex flex-col items-center">
+              <motion.div
+                initial={reduceMotion ? false : { scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: reduceMotion ? 0 : 0.4 }}
+                className="mb-8"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-[#ebecef] flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-[#315C9D]" strokeWidth={2} aria-hidden="true" />
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={reduceMotion ? false : { y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: reduceMotion ? 0 : 0.1 }}
+                className="text-center mb-8 w-full"
+              >
+                <h1 className="text-xl font-semibold text-[#111827] mb-1">{tr(selectedLanguage, 'ckycOtpTitle')}</h1>
+                {/* The number is substituted rather than concatenated, because
+                    Tamil puts it ahead of the verb while English puts it last. */}
+                <p className="text-sm text-[#6b7280]">
+                  {tr(selectedLanguage, 'ckycOtpSubtitle').replace(
+                    '{mobile}',
+                    `+91 ${HRMS_EMPLOYEE.mobile}`,
+                  )}
+                </p>
+              </motion.div>
+
+              <motion.div
+                initial={reduceMotion ? false : { y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: reduceMotion ? 0 : 0.2 }}
+                className="w-full mb-6"
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  {ckycOtp.map((digit, index) => (
+                    <div key={index} className="flex-1">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        aria-label={
+                          selectedLanguage === 'English'
+                            ? `CKYC OTP digit ${index + 1} of 6`
+                            : `CKYC OTP இலக்கம் ${index + 1} / 6`
+                        }
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/\D/g, '').slice(0, 1);
+                          const newOtp = [...ckycOtp];
+                          newOtp[index] = v;
+                          setCkycOtp(newOtp);
+                          if (v && index < 5) {
+                            const next = e.target.parentElement?.nextElementSibling?.querySelector('input');
+                            next?.focus();
+                          }
+                        }}
+                        className="w-full h-14 text-center text-xl font-bold bg-transparent border border-[#e5e7eb] rounded-lg focus:border-[#254576] focus:ring-1 focus:ring-[#254576]/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] transition-all text-[#212121]"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-center text-sm">
+                  {ckycResendTimer > 0 ? (
+                    <span className="text-[#666666]">{t.resendText} {ckycResendTimer}s</span>
+                  ) : (
+                    <button
+                      onClick={() => setCkycResendTimer(30)}
+                      className="text-[#315C9D] font-semibold rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                    >
+                      {t.resendBtn}
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+
+              <StickyFooter>
+                <CTAButton
+                  disabled={ckycOtp.join('').length !== 6 || ckycOtpVerifying}
+                  onClick={() => {
+                    if (ckycOtp.join('').length === 6 && !ckycOtpVerifying) {
+                      setCkycOtpVerifying(true);
+                      setTimeout(() => { setCkycOtpVerifying(false); goNext(); }, 1200);
+                    }
+                  }}
+                >
+                  {ckycOtpVerifying ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" strokeWidth={2.5} aria-hidden="true" />
+                      {selectedLanguage === 'English' ? 'Verifying OTP...' : 'OTP சரிபார்க்கிறது...'}
+                    </>
+                  ) : (
+                    <>
+                      {t.verifyBtn}
+                      <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
+                    </>
+                  )}
+                </CTAButton>
+              </StickyFooter>
             </div>
           )}
 
@@ -806,70 +1010,77 @@ export function AadhaarVerificationPage() {
         </div>
       </main>
 
-      {/* ── Consent Sheet (shown after OTP verification) ── */}
-      <AnimatePresence>
-        {showConsentSheet && (
+      {/* ── Consent text, read-only ──────────────────────────────────────────
+          Opened from Read more. Consent itself is given by the checkbox in the
+          footer, so this sheet decides nothing and never advances the step. */}
+      <BottomSheet
+        open={showConsentSheet}
+        onClose={() => { setShowModalLanguageMenu(false); setShowConsentSheet(false); }}
+        title={t.modalConsentTitle}
+        closeLabel={selectedLanguage === 'English' ? 'Close' : 'மூடு'}
+        toolbar={
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.7 }} exit={{ opacity: 0 }}
-              onClick={() => setShowConsentSheet(false)}
-              className="fixed inset-0 bg-black z-[100]" />
-
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-xl shadow-2xl z-[101] max-h-[85vh] overflow-hidden flex flex-col">
-
-              <div className="flex justify-center pt-3 pb-2">
-                <div className="w-10 h-1 bg-[#d9d9d9] rounded-full" />
+            <div className="px-5 py-3">
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-expanded={showModalLanguageMenu}
+                  onClick={() => setShowModalLanguageMenu(!showModalLanguageMenu)}
+                  className="w-full bg-transparent border border-[#e5e7eb] rounded-lg px-3 h-11 flex items-center justify-between text-sm font-semibold text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                >
+                  <span>{modalLanguage}</span>
+                  <ChevronDown className={`w-4 h-4 text-[#666666] transition-transform ${showModalLanguageMenu ? 'rotate-180' : ''}`} aria-hidden="true" />
+                </button>
+                {showModalLanguageMenu && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-[#e5e7eb] py-1 z-50 max-h-[200px] overflow-y-auto">
+                    {languages.map((lang) => (
+                      <button key={lang} type="button" onClick={() => { setModalLanguage(lang); setShowModalLanguageMenu(false); }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-[#f9fafb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] ${modalLanguage === lang ? 'text-[#315C9D] font-semibold' : 'text-[#111827]'}`}>
+                        {lang}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+            </div>
 
-              <div className="px-6 py-3 border-b border-[#e5e7eb]">
-                <h2 className="text-base font-semibold text-[#111827]">{t.modalConsentTitle}</h2>
+            <div className="px-5 pb-3">
+              <div className="flex items-center gap-3">
+                <Volume2 className="w-5 h-5 text-[#315C9D] flex-shrink-0" aria-hidden="true" />
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={volume}
+                  onChange={(e) => setVolume(parseInt(e.target.value))}
+                  aria-label={selectedLanguage === 'English' ? 'Volume' : 'ஒலி அளவு'}
+                  className="flex-1 h-1.5 rounded-lg accent-[#111827] cursor-pointer"
+                />
+                <span className="text-[12px] text-[#666666] font-medium min-w-[32px]">{volume}%</span>
               </div>
-
-              <div className="px-5 py-3 border-b border-[#e5e7eb]">
-                <div className="relative">
-                  <button onClick={() => setShowModalLanguageMenu(!showModalLanguageMenu)}
-                    className="w-full bg-transparent border border-[#e5e7eb] rounded-lg px-3 h-11 flex items-center justify-between text-sm font-semibold text-[#212121]">
-                    <span>{modalLanguage}</span>
-                    <ChevronDown className={`w-4 h-4 text-[#666666] transition-transform ${showModalLanguageMenu ? 'rotate-180' : ''}`} />
-                  </button>
-                  {showModalLanguageMenu && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-[#e5e7eb] py-1 z-50 max-h-[200px] overflow-y-auto">
-                      {languages.map((lang) => (
-                        <button key={lang} onClick={() => { setModalLanguage(lang); setShowModalLanguageMenu(false); }}
-                          className={`w-full text-left px-4 py-2 text-sm hover:bg-[#f9fafb] ${modalLanguage === lang ? 'text-[#315C9D] font-semibold' : 'text-[#111827]'}`}>
-                          {lang}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="px-5 py-3 border-b border-[#e5e7eb]">
-                <div className="flex items-center gap-3">
-                  <Volume2 className="w-5 h-5 text-[#315C9D] flex-shrink-0" />
-                  <input type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(parseInt(e.target.value))}
-                    className="flex-1 h-1.5 rounded-lg accent-[#111827] cursor-pointer" />
-                  <span className="text-[12px] text-[#666666] font-medium min-w-[32px]">{volume}%</span>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto px-6 py-5">
-                <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
-                  {modalLanguage === 'Tamil' ? content.Tamil.consentTextFull : content.English.consentTextFull}
-                </p>
-              </div>
-
-              <div className="px-6 py-5 border-t border-[#e5e7eb]">
-                <CTAButton onClick={() => { setConsent(true); setShowConsentSheet(false); goNext(); }}>
-                  {modalLanguage === 'Tamil' ? content.Tamil.agreeAndContinue : content.English.agreeAndContinue}
-                </CTAButton>
-              </div>
-            </motion.div>
+            </div>
           </>
-        )}
-      </AnimatePresence>
+        }
+      >
+        <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
+          {modalLanguage === 'Tamil' ? content.Tamil.consentTextFull : content.English.consentTextFull}
+        </p>
+      </BottomSheet>
+
+      {/* ── CKYC download consent text, read-only ────────────────────────────
+          Opened from the Read more beside the CKYC checkbox on `confirm-details`.
+          Like the sheet above it decides nothing: no accept action, and it never
+          sets the checkbox or advances the step. */}
+      <BottomSheet
+        open={showCkycConsentSheet}
+        onClose={() => setShowCkycConsentSheet(false)}
+        title={tr(selectedLanguage, 'ckycDownloadConsentTitle')}
+        closeLabel={selectedLanguage === 'English' ? 'Close' : 'மூடு'}
+      >
+        <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
+          {tr(selectedLanguage, 'ckycDownloadConsentFull')}
+        </p>
+      </BottomSheet>
     </div>
   );
 }

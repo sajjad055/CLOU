@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { ArrowRight, Check } from 'lucide-react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
+import { BottomSheet } from './BottomSheet';
 import { useLanguage } from '../hooks/useLanguage';
 import { tr } from '../flows/hrmsContent';
 import { getActiveFlow, hrmsNextRoute, isHrmsFlow, type HrmsFlowId } from '../flows/hrmsFlows';
@@ -59,6 +60,9 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
   const [pan, setPan] = useState(() => readJourney(flow).pan);
   const [panBlurred, setPanBlurred] = useState(false);
   const [consent, setConsent] = useState(false);
+  // Purely informational: the sheet only shows the full consent wording. It never
+  // sets `consent` and never advances the flow, so the CTA gating is untouched.
+  const [showConsentSheet, setShowConsentSheet] = useState(false);
 
   // ── Aadhaar entry with per-digit masking ──
   // Same technique as AadhaarVerificationPage: a transparent input holds the
@@ -305,25 +309,44 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
       </main>
 
       <StickyFooter>
-        {/* Aadhaar consent — selection is signalled by the tick icon, not colour alone. */}
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={consent}
-          onClick={() => setConsent(!consent)}
-          className="w-full flex items-start gap-3 mb-3 text-left rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
-        >
-          <span
-            className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-[5px] border flex items-center justify-center transition-colors ${
-              consent ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
-            }`}
+        {/* Aadhaar consent — the short declaration stays inline above the CTA; the
+            full UIDAI wording lives behind "Read more". The link is a sibling of
+            the checkbox, never a child of it: a button inside a button is invalid
+            HTML and the inner control would be unreachable. */}
+        <div className="mb-3 flex items-start gap-3">
+          {/* The button wraps only the box, so "Read more" can sit in the text
+              flow beside the copy. Selection is signalled by the tick icon,
+              not colour alone. */}
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={consent}
+            aria-labelledby="pan-aadhaar-consent-label"
+            onClick={() => setConsent(!consent)}
+            className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
           >
-            {consent && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
-          </span>
-          <span className="text-[12px] text-[#6b7280] leading-relaxed">
-            {tr(selectedLanguage, 'panAadhaarConsentText')}
-          </span>
-        </button>
+            <span
+              className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
+                consent ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
+              }`}
+            >
+              {consent && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
+            </span>
+          </button>
+
+          <p className="text-[12px] text-[#6b7280] leading-relaxed">
+            <span id="pan-aadhaar-consent-label">
+              {tr(selectedLanguage, 'panAadhaarConsentText')}
+            </span>{' '}
+            <button
+              type="button"
+              onClick={() => setShowConsentSheet(true)}
+              className="text-[12px] font-semibold text-[#315C9D] underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+            >
+              {tr(selectedLanguage, 'panAadhaarReadMore')}
+            </button>
+          </p>
+        </div>
 
         <button
           type="button"
@@ -336,6 +359,18 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
           <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
         </button>
       </StickyFooter>
+
+      {/* Read-only consent sheet — no footer action, so closing it is the only exit
+          and the checkbox above remains the single place consent is given. */}
+      <BottomSheet
+        open={showConsentSheet}
+        onClose={() => setShowConsentSheet(false)}
+        title={tr(selectedLanguage, 'panAadhaarConsentTitle')}
+      >
+        <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
+          {tr(selectedLanguage, 'panAadhaarConsentFull')}
+        </p>
+      </BottomSheet>
     </div>
   );
 }

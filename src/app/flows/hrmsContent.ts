@@ -27,28 +27,48 @@ export interface HrmsStrings {
   hrmsDetailsSubtitle: string;
   hrmsFetchingTitle: string;
   hrmsFetchingSubtitle: string;
+  /** Greeting word, rendered ahead of the fetched employee name. */
+  hrmsGreeting: string;
+  /** Lead line below the greeting, naming what the journey delivers. */
+  hrmsGreetingLead: string;
 
   // ── HRMS details screen — field labels ──
-  hrmsNameLabel: string;
   hrmsMobileLabel: string;
   hrmsDobLabel: string;
   hrmsPanLabel: string;
   hrmsPanUnavailableLabel: string;
 
-  // ── HRMS details screen — consent, data protection, controls ──
+  // ── HRMS details screen — consent and controls ──
+  /**
+   * Consent wording, shown only on the flows whose HRMS record carried a PAN.
+   * The `hrms-nopan-*` flows have captured neither a PAN nor an Aadhaar number at
+   * this point, so there is nothing a CKYC download could be authorised against
+   * and they show no consent here.
+   */
   hrmsConsentText: string;
-  hrmsDataProtectionText: string;
   hrmsContinueBtn: string;
 
   // ── HRMS details screen — record error ──
   hrmsRecordErrorMessage: string;
   hrmsRetryBtn: string;
 
+  // ── HRMS details screen — banking partner row and trust badges ──
+  hrmsBankingPartnerLabel: string;
+  /** Alt text for the IOB logo. */
+  hrmsBankName: string;
+  hrmsBadgeInstant: string;
+  hrmsBadgeSecure: string;
+
   // ── Account choice screen ──
   accountChoiceTitle: string;
   accountChoiceSubtitle: string;
   accountChoiceHasAccount: string;
   accountChoiceNoAccount: string;
+  /**
+   * Context line shown above the PAN and Aadhaar fields once "I don't have an
+   * IOB account" is selected, naming what the verification will run on.
+   */
+  accountChoiceNoAccountContext: string;
   accountChoiceSelectedMarker: string;
   accountChoiceContinueBtn: string;
 
@@ -74,7 +94,29 @@ export interface HrmsStrings {
   panAadhaarAadhaarRequiredMarker: string;
   panAadhaarAadhaarPlaceholder: string;
   panAadhaarConsentText: string;
+  /** Opens the read-only Aadhaar consent sheet from beside the consent checkbox. */
+  panAadhaarReadMore: string;
+  panAadhaarConsentTitle: string;
+  /** Full UIDAI consent wording, paragraph-separated by `\n\n`. */
+  panAadhaarConsentFull: string;
   panAadhaarContinueBtn: string;
+
+  // ── CKYC download consent + confirming OTP (Aadhaar segments that fetch CKYC) ──
+  /**
+   * Inline declaration shown on the Aadhaar `confirm-details` step, but only in
+   * the segments that go on to download a CKYC record with that Aadhaar number.
+   * Two lines maximum; the formal wording lives in `ckycDownloadConsentFull`
+   * behind the shared `panAadhaarReadMore` link.
+   */
+  ckycDownloadConsentText: string;
+  /** Full CKYC-download wording for the read-only sheet, paragraphs split by `\n\n`. */
+  ckycDownloadConsentFull: string;
+  ckycDownloadConsentTitle: string;
+  /** Heading of the OTP step that authorises the CKYC download. */
+  ckycOtpTitle: string;
+  ckycOtpSubtitle: string;
+  /** CTA on `confirm-details` when the next step is the CKYC-download OTP. */
+  ckycConfirmBtn: string;
 
   // ── HRMS progress-step labels (Simulated_Backend) ──
   stepHrmsFetch: string;
@@ -105,19 +147,18 @@ const English: HrmsStrings = {
     "These details were fetched from your employer's HRMS record. Review them and give your consent to continue.",
   hrmsFetchingTitle: 'Fetching Your Employee Details',
   hrmsFetchingSubtitle: 'This takes a few seconds. Please stay on this screen.',
+  hrmsGreeting: 'Hello',
+  hrmsGreetingLead: 'Get salary advances on your UPI',
 
   // ── HRMS details screen — field labels ──
-  hrmsNameLabel: 'Name',
   hrmsMobileLabel: 'Mobile Number',
   hrmsDobLabel: 'Date of Birth',
   hrmsPanLabel: 'PAN',
   hrmsPanUnavailableLabel: 'Not available in your HRMS record',
 
-  // ── HRMS details screen — consent, data protection, controls ──
+  // ── HRMS details screen — consent and controls ──
   hrmsConsentText:
     'I authorise Indian Overseas Bank to validate my PAN and to download my CKYC record for this credit application.',
-  hrmsDataProtectionText:
-    'The details fetched from your employer are used only for this credit application and are not shared for any other purpose.',
   hrmsContinueBtn: 'Continue',
 
   // ── HRMS details screen — record error ──
@@ -125,12 +166,20 @@ const English: HrmsStrings = {
     'We could not retrieve your employee details from HRMS. Please try again.',
   hrmsRetryBtn: 'Retry',
 
+  // ── HRMS details screen — banking partner row and trust badges ──
+  hrmsBankingPartnerLabel: 'Powered by',
+  hrmsBankName: 'Indian Overseas Bank',
+  hrmsBadgeInstant: 'Get credit instantly',
+  hrmsBadgeSecure: 'Safe and Secure',
+
   // ── Account choice screen ──
   accountChoiceTitle: 'Do You Have an IOB Account?',
   accountChoiceSubtitle:
-    'Tell us whether you already bank with Indian Overseas Bank so we ask only for the details we need.',
+    'We need this to verify your identity and complete your credit application.',
   accountChoiceHasAccount: 'I have an IOB account',
   accountChoiceNoAccount: "I don't have an IOB account",
+  accountChoiceNoAccountContext:
+    'We will continue your verification with your Aadhaar and PAN.',
   accountChoiceSelectedMarker: 'Selected',
   accountChoiceContinueBtn: 'Continue',
 
@@ -161,7 +210,22 @@ const English: HrmsStrings = {
   panAadhaarAadhaarPlaceholder: 'Enter your 12-digit Aadhaar number',
   panAadhaarConsentText:
     'I authorise Indian Overseas Bank to use my Aadhaar number for identity verification.',
+  panAadhaarReadMore: 'Read more',
+  panAadhaarConsentTitle: 'Aadhaar Consent',
+  panAadhaarConsentFull:
+    "I agree and authorize Indian Overseas Bank to fetch my name, date of birth and photograph from UIDAI, limited to authenticating myself with Aadhaar based authentication system for identity verification in adherence to performing e-KYC.\n\nI understand that Indian Overseas Bank will authenticate my identity through the Aadhaar authentication system for personal loans and/or for other purposes, or as authorised under the Aadhaar Act, 2016.\n\nI understand that Indian Overseas Bank shall ensure security and confidentiality of my personal identity data and prohibit its use other than for submission to the Central Identities Data Repository (CIDR) for authentication.\n\nI hereby authorize Indian Overseas Bank to verify and authenticate using the Aadhaar number provided.",
   panAadhaarContinueBtn: 'Continue',
+
+  // ── CKYC download consent + confirming OTP ──
+  ckycDownloadConsentText:
+    'I authorise Indian Overseas Bank to check and download my CKYC records for verification.',
+  ckycDownloadConsentFull:
+    'I authorise Indian Overseas Bank to fetch my Know Your Customer (KYC) record from the Central KYC Registry (CKYCR) using the Aadhaar number I have provided and verified in this application.\n\nI understand that the record retrieved will be used only to process this credit application — to establish my identity, to check my details against the bank\u2019s records and to complete the KYC requirements for it — and for no other purpose.\n\nI understand that Indian Overseas Bank shall keep the retrieved data secure and confidential, shall not share it except as required by law or by the regulator, and shall retain it only for as long as the applicable regulations require.\n\nI confirm that this authorisation is given voluntarily and that the Aadhaar number used for this retrieval is my own.',
+  ckycDownloadConsentTitle: 'CKYC Download Consent',
+  ckycOtpTitle: 'Confirm CKYC Download',
+  /** `{mobile}` is replaced with the customer's number at render time. */
+  ckycOtpSubtitle: 'Enter the 6-digit OTP sent to {mobile}',
+  ckycConfirmBtn: 'Confirm with OTP',
 
   // ── HRMS progress-step labels (Simulated_Backend) ──
   stepHrmsFetch: 'Fetching your employee details from HRMS…',
@@ -194,19 +258,18 @@ const Tamil: HrmsStrings = {
     'இந்த விவரங்கள் உங்கள் நிறுவனத்தின் HRMS பதிவிலிருந்து பெறப்பட்டன. அவற்றைச் சரிபார்த்து, தொடர உங்கள் சம்மதத்தை அளிக்கவும்.',
   hrmsFetchingTitle: 'உங்கள் ஊழியர் விவரங்கள் பெறப்படுகின்றன',
   hrmsFetchingSubtitle: 'இதற்கு சில வினாடிகள் ஆகும். இந்தத் திரையிலேயே இருக்கவும்.',
+  hrmsGreeting: 'வணக்கம்',
+  hrmsGreetingLead: 'உங்கள் UPI யில் சம்பள முன்பணம் பெறுங்கள்',
 
   // ── HRMS details screen — field labels ──
-  hrmsNameLabel: 'பெயர்',
   hrmsMobileLabel: 'மொபைல் எண்',
   hrmsDobLabel: 'பிறந்த தேதி',
   hrmsPanLabel: 'PAN',
   hrmsPanUnavailableLabel: 'உங்கள் HRMS பதிவில் கிடைக்கவில்லை',
 
-  // ── HRMS details screen — consent, data protection, controls ──
+  // ── HRMS details screen — consent and controls ──
   hrmsConsentText:
     'இந்தக் கடன் விண்ணப்பத்திற்காக எனது PAN ஐ சரிபார்க்கவும், எனது CKYC பதிவைப் பெறவும் இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
-  hrmsDataProtectionText:
-    'உங்கள் நிறுவனத்திலிருந்து பெறப்பட்ட விவரங்கள் இந்தக் கடன் விண்ணப்பத்திற்கு மட்டுமே பயன்படுத்தப்படும், வேறு எந்த நோக்கத்திற்கும் பங்கிடப்படாது.',
   hrmsContinueBtn: 'தொடரவும்',
 
   // ── HRMS details screen — record error ──
@@ -214,12 +277,20 @@ const Tamil: HrmsStrings = {
     'HRMS இலிருந்து உங்கள் ஊழியர் விவரங்களைப் பெற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.',
   hrmsRetryBtn: 'மீண்டும் முயற்சிக்கவும்',
 
+  // ── HRMS details screen — banking partner row and trust badges ──
+  hrmsBankingPartnerLabel: 'வழங்குபவர்',
+  hrmsBankName: 'இந்தியன் ஓவர்சீஸ் வங்கி',
+  hrmsBadgeInstant: 'உடனடி கடன்',
+  hrmsBadgeSecure: 'பாதுகாப்பானது',
+
   // ── Account choice screen ──
   accountChoiceTitle: 'உங்களுக்கு IOB கணக்கு உள்ளதா?',
   accountChoiceSubtitle:
-    'நீங்கள் ஏற்கனவே இந்தியன் ஓவர்சீஸ் வங்கியில் கணக்கு வைத்திருக்கிறீர்களா என்பதைத் தெரிவிக்கவும். அதற்கேற்ப தேவையான விவரங்களை மட்டுமே கேட்போம்.',
+    'உங்கள் அடையாளத்தைச் சரிபார்த்து உங்கள் கடன் விண்ணப்பத்தை முடிக்க இது தேவை.',
   accountChoiceHasAccount: 'எனக்கு IOB கணக்கு உள்ளது',
   accountChoiceNoAccount: 'எனக்கு IOB கணக்கு இல்லை',
+  accountChoiceNoAccountContext:
+    'உங்கள் ஆதார் மற்றும் PAN மூலம் உங்கள் சரிபார்ப்பைத் தொடர்வோம்.',
   accountChoiceSelectedMarker: 'தேர்ந்தெடுக்கப்பட்டது',
   accountChoiceContinueBtn: 'தொடரவும்',
 
@@ -250,7 +321,21 @@ const Tamil: HrmsStrings = {
   panAadhaarAadhaarPlaceholder: 'உங்கள் 12 இலக்க ஆதார் எண்ணை உள்ளிடவும்',
   panAadhaarConsentText:
     'அடையாள சரிபார்ப்புக்கு எனது ஆதார் எண்ணைப் பயன்படுத்த இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
+  panAadhaarReadMore: 'மேலும் படிக்க',
+  panAadhaarConsentTitle: 'ஆதார் சம்மதம்',
+  panAadhaarConsentFull:
+    'e-KYC ஐ செய்வதில் இணங்கி அடையாள சரிபார்ப்புக்காக UIDAI இலிருந்து எனது பெயர், பிறந்த தேதி மற்றும் புகைப்படத்தைப் பெற இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் ஒப்புக்கொள்கிறேன்.',
   panAadhaarContinueBtn: 'தொடரவும்',
+
+  // ── CKYC download consent + confirming OTP ──
+  ckycDownloadConsentText:
+    'சரிபார்ப்புக்காக எனது CKYC பதிவுகளைச் சரிபார்த்து பெற இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
+  ckycDownloadConsentFull:
+    'இந்த விண்ணப்பத்தில் நான் வழங்கி சரிபார்க்கப்பட்ட ஆதார் எண்ணைப் பயன்படுத்தி, மைய KYC பதிவேட்டிலிருந்து (CKYCR) எனது KYC பதிவைப் பெற இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.\n\nபெறப்படும் பதிவு இந்தக் கடன் விண்ணப்பத்தை மட்டுமே செயலாக்கப் பயன்படும் — எனது அடையாளத்தை உறுதிப்படுத்த, எனது விவரங்களை வங்கியின் பதிவுகளுடன் சரிபார்க்க, மற்றும் அதற்குத் தேவையான KYC நடைமுறைகளை முடிக்க — வேறு எந்த நோக்கத்திற்கும் பயன்படாது என்பதை நான் புரிந்துகொள்கிறேன்.\n\nபெறப்பட்ட தரவை இந்தியன் ஓவர்சீஸ் வங்கி பாதுகாப்பாகவும் ரகசியமாகவும் வைத்திருக்கும், சட்டம் அல்லது ஒழுங்குமுறை அமைப்பு கோரும் தவிர வேறு யாருடனும் பங்கிடாது, மற்றும் பொருந்தும் விதிமுறைகள் கோரும் காலம் வரை மட்டுமே வைத்திருக்கும் என்பதை நான் புரிந்துகொள்கிறேன்.\n\nஇந்த அனுமதியை நான் விருப்பத்துடன் அளிக்கிறேன், மேலும் இதற்குப் பயன்படுத்தப்படும் ஆதார் எண் என்னுடையது என்பதை உறுதிப்படுத்துகிறேன்.',
+  ckycDownloadConsentTitle: 'CKYC பதிவு பெறுவதற்கான சம்மதம்',
+  ckycOtpTitle: 'CKYC பதிவு பெறுதலை உறுதிப்படுத்தவும்',
+  ckycOtpSubtitle: '{mobile} க்கு அனுப்பப்பட்ட 6 இலக்க OTP ஐ உள்ளிடவும்',
+  ckycConfirmBtn: 'OTP மூலம் உறுதிப்படுத்தவும்',
 
   // ── HRMS progress-step labels (Simulated_Backend) ──
   stepHrmsFetch: 'HRMS இலிருந்து உங்கள் ஊழியர் விவரங்கள் பெறப்படுகின்றன…',

@@ -4,18 +4,16 @@ import { motion, useReducedMotion } from 'motion/react';
 import {
   AlertCircle,
   ArrowRight,
-  Calendar,
   Check,
   CheckCircle,
-  CreditCard,
   Loader2,
   RotateCcw,
   ShieldCheck,
-  Smartphone,
-  User,
+  Zap,
 } from 'lucide-react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
+import { SalaryAdvanceInfoSections } from './SalaryAdvanceInfoSections';
 import { useLanguage } from '../hooks/useLanguage';
 import type { Language } from '../hooks/useLanguage';
 import {
@@ -31,6 +29,8 @@ import {
 } from '../flows/hrmsFlows';
 import { readJourney, writeJourney } from '../flows/hrmsJourney';
 import { tr } from '../flows/hrmsContent';
+import iobLogo from '@/assets/iob.svg';
+import upiLogo from '@/assets/upi.svg';
 
 /**
  * HRMS_Details_Screen — entry screen for all five HRMS journeys.
@@ -39,8 +39,17 @@ import { tr } from '../flows/hrmsContent';
  * convention already used by `CKYCConsentPage` and `CKYCCustomerDetailsPage`:
  *
  *   fetching   simulated HRMS employee-record fetch, auto-advances
- *   review     read-only record + one consent control gating the CTA
+ *   review     greeting + read-only record + explainer sections, with the
+ *              consent declaration inline above the CTA
  *   processing simulated CKYC identifier retrieval + PAN dedupe (flows 1–2 only)
+ *
+ * `consent-declaration-pattern.md` puts a single declaration inline with the CTA
+ * however heavy the screen, so the checkbox sits in the `StickyFooter` above the
+ * button rather than in a sheet. It is shown only for the flows whose HRMS record
+ * carried a PAN: CKYC cannot be fetched without a PAN or an Aadhaar number, and
+ * the `hrms-nopan-*` flows have captured neither here, so asking them to
+ * authorise a CKYC download would be asking for consent that cannot apply. Those
+ * flows show no consent control and their CTA is gated on the record alone.
  *
  * Which phase follows `review` is decided by the registry, never by this
  * component. `hrmsNextRoute` encodes an in-component phase transition as a
@@ -51,6 +60,9 @@ const ROUTE = '/hrms-details';
 
 /** Pause between the last completed progress row and leaving the phase (≤ 500 ms). */
 const PHASE_TAIL_MS = 400;
+
+/** Same display treatment LandingPage gives its hero heading. */
+const HERO_FONT = "'Manrope', sans-serif";
 
 type Phase = 'fetching' | 'review' | 'processing';
 
@@ -112,7 +124,16 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
   const recordError = phase === 'review' && !recordComplete;
 
   const panAvailable = definition.hrmsPanPresent;
-  const canContinue = consentAccepted && recordComplete;
+
+  /**
+   * Whether this screen asks for consent at all. Only the PAN-present flows have
+   * an identifier a CKYC download could be authorised against; the `hrms-nopan-*`
+   * flows take their consent later, on the screen that collects the identifier.
+   */
+  const consentRequired = definition.hrmsPanPresent;
+
+  /** Consent, when required, is the only thing gating the CTA beyond the record. */
+  const canContinue = recordComplete && (!consentRequired || consentAccepted);
 
   /**
    * Drives whichever phase is currently simulating backend work: one timer per
@@ -146,6 +167,7 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
     return () => clearTimeout(timer);
   }, [phase, stepIndex, runningSteps, flow, navigate]);
 
+  /** Persisted on every toggle, so returning to this screen restores the choice. */
   const handleToggleConsent = () => {
     const next = !consentAccepted;
     setConsentAccepted(next);
@@ -159,8 +181,8 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
   };
 
   const handleContinue = () => {
-    // The CTA is rendered `disabled`, so this is belt-and-braces: an activation
-    // that slips through performs no navigation (Requirements 4.5, 4.10).
+    // Rendered `disabled` until the gate opens; guarded here too, so an
+    // activation that slips through submits nothing (Requirements 4.5, 4.10).
     if (!canContinue) return;
 
     const next = hrmsNextRoute(flow, 'hrms-details');
@@ -193,12 +215,6 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
           animate: { scale: 1, opacity: 1 },
           transition: { duration: 0.4 },
         };
-
-  const detailRows: Array<{ icon: typeof User; label: string; value: string; mono?: boolean }> = [
-    { icon: User, label: tr(language, 'hrmsNameLabel'), value: HRMS_EMPLOYEE.name },
-    { icon: Smartphone, label: tr(language, 'hrmsMobileLabel'), value: HRMS_EMPLOYEE.mobile, mono: true },
-    { icon: Calendar, label: tr(language, 'hrmsDobLabel'), value: HRMS_EMPLOYEE.dob, mono: true },
-  ];
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -235,20 +251,27 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
             </div>
           )}
 
-          {/* ── Review: read-only record + consent ── */}
+          {/* ── Review: greeting, read-only record, explainer sections ── */}
           {phase === 'review' && (
             <div className="flex flex-col">
-              <motion.div {...pop()} className="flex justify-center mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-[#ebecef] flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-[#315C9D]" strokeWidth={2} aria-hidden="true" />
-                </div>
-              </motion.div>
-
-              <motion.div {...enter(0.1)} className="text-center mb-6">
-                <h1 className="text-xl font-semibold text-[#111827] mb-1">
-                  {tr(language, 'hrmsDetailsTitle')}
+              {/* The page lead. A greeting line naming the employee, then the h1
+                  naming what the journey delivers — the same display treatment
+                  LandingPage gives its hero. Two inline spans in one paragraph, so
+                  greeting and name share a baseline. */}
+              <motion.div {...enter(0.1)} className="mb-6">
+                <p className="text-[#111827] mb-1">
+                  <span className="text-[16px] font-normal">
+                    {tr(language, 'hrmsGreeting')}
+                  </span>{' '}
+                  <span className="text-[18px] font-semibold">{HRMS_EMPLOYEE.name}</span>
+                </p>
+                <h1
+                  style={{ fontFamily: HERO_FONT }}
+                  className="text-3xl font-extrabold text-[#111827] tracking-tight leading-tight"
+                >
+                  {tr(language, 'hrmsGreetingLead')}
                 </h1>
-                <p className="text-sm text-[#6b7280] leading-relaxed">
+                <p className="text-sm text-[#6b7280] leading-relaxed mt-2">
                   {tr(language, 'hrmsDetailsSubtitle')}
                 </p>
               </motion.div>
@@ -277,92 +300,119 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
                 </div>
               )}
 
-              {/* Fetched record. Every value is text, never an input, so it
-                  cannot be changed by typing, pasting or selection. */}
+              {/* Fetched record. The name is not repeated here — it already leads
+                  the screen in the greeting above. Every value is text, never an
+                  input, so it cannot be changed by typing, pasting or selection.
+                  No icon column: the mobile/DOB row splits into two columns, and
+                  at 320px the icons would push the fixed-width values out of
+                  their column. */}
               <motion.div
                 {...enter(0.2)}
                 className="bg-[#f9fafb] border border-[#e5e7eb] rounded-xl overflow-hidden mb-4"
               >
-                {detailRows.map((row, i) => {
-                  const Icon = row.icon;
-                  return (
-                    <div
-                      key={row.label}
-                      className={`flex items-start gap-3 p-4 ${i !== 0 ? 'border-t border-[#e5e7eb]' : ''}`}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-[#315C9D]/10 flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-4 h-4 text-[#315C9D]" strokeWidth={2} aria-hidden="true" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold text-[#666666] uppercase tracking-wide mb-0.5">
-                          {row.label}
-                        </p>
-                        <p
-                          className={`text-sm font-semibold text-[#212121] leading-snug ${row.mono ? 'font-mono tracking-wide' : ''}`}
-                        >
-                          {row.value}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* PAN row. Flows 1–2 show the HRMS PAN; flows 3–5 show an empty
-                    value with a visible "not available" label. */}
-                <div className="flex items-start gap-3 p-4 border-t border-[#e5e7eb]">
-                  <div className="w-8 h-8 rounded-full bg-[#315C9D]/10 flex items-center justify-center flex-shrink-0">
-                    <CreditCard className="w-4 h-4 text-[#315C9D]" strokeWidth={2} aria-hidden="true" />
+                {/* Mobile number and date of birth, side by side. Both values are
+                    monospaced and tabular, so the two columns hold a predictable
+                    width. */}
+                <div className="grid grid-cols-2 gap-3 p-4">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold text-[#666666] uppercase tracking-wide mb-0.5">
+                      {tr(language, 'hrmsMobileLabel')}
+                    </p>
+                    <p className="text-sm font-semibold text-[#212121] leading-snug font-mono tabular-nums">
+                      {HRMS_EMPLOYEE.mobile}
+                    </p>
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] font-semibold text-[#666666] uppercase tracking-wide mb-0.5">
-                      {tr(language, 'hrmsPanLabel')}
+                      {tr(language, 'hrmsDobLabel')}
                     </p>
-                    {panAvailable ? (
-                      <p className="text-sm font-semibold text-[#212121] leading-snug font-mono tracking-wide">
-                        {HRMS_EMPLOYEE.pan}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-[#6b7280] leading-snug">
-                        {tr(language, 'hrmsPanUnavailableLabel')}
-                      </p>
-                    )}
+                    <p className="text-sm font-semibold text-[#212121] leading-snug font-mono tabular-nums">
+                      {HRMS_EMPLOYEE.dob}
+                    </p>
                   </div>
                 </div>
-              </motion.div>
 
-              {/* Data-protection statement — always visible, no interaction to reveal */}
-              <motion.div
-                {...enter(0.3)}
-                className="bg-[#eef3fa] border border-[#315C9D]/15 rounded-xl p-4 flex items-start gap-3 mb-3"
-              >
-                <div className="w-9 h-9 rounded-full bg-[#315C9D]/10 flex items-center justify-center flex-shrink-0">
-                  <ShieldCheck className="w-5 h-5 text-[#315C9D]" strokeWidth={2} aria-hidden="true" />
+                {/* PAN. Flows 1–2 show the HRMS PAN; flows 3–5 show the visible
+                    "not available in your HRMS record" label. */}
+                <div className="p-4 border-t border-[#e5e7eb]">
+                  <p className="text-[11px] font-semibold text-[#666666] uppercase tracking-wide mb-0.5">
+                    {tr(language, 'hrmsPanLabel')}
+                  </p>
+                  {panAvailable ? (
+                    <p className="text-sm font-semibold text-[#212121] leading-snug font-mono tracking-wide">
+                      {HRMS_EMPLOYEE.pan}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-[#6b7280] leading-snug">
+                      {tr(language, 'hrmsPanUnavailableLabel')}
+                    </p>
+                  )}
                 </div>
-                <p className="text-[12px] text-[#6b7280] leading-relaxed">
-                  {tr(language, 'hrmsDataProtectionText')}
-                </p>
               </motion.div>
 
+              {/* Banking partner and trust badges, carried over from LandingPage
+                  (without its phone-UPI hero image). */}
+              <motion.div {...enter(0.4)} className="text-center mt-5">
+                <p className="text-[10px] font-normal text-[#9e9e9e] tracking-wider mb-3">
+                  {tr(language, 'hrmsBankingPartnerLabel')}
+                </p>
+                <div className="flex items-center justify-center gap-4">
+                  <img src={iobLogo} alt={tr(language, 'hrmsBankName')} className="h-[29px] w-auto object-contain" />
+                  <div className="w-px h-6 bg-[#e5e7eb]"></div>
+                  <img src={upiLogo} alt="UPI" className="h-[22px] w-auto object-contain" />
+                </div>
+              </motion.div>
+
+              <motion.div {...enter(0.5)} className="flex justify-center gap-6 mt-4">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-[#6b7280]" strokeWidth={2.5} aria-hidden="true" />
+                  <span className="text-[12px] font-semibold text-[#6b7280]">
+                    {tr(language, 'hrmsBadgeInstant')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#6b7280]" strokeWidth={2.5} aria-hidden="true" />
+                  <span className="text-[12px] font-semibold text-[#6b7280]">
+                    {tr(language, 'hrmsBadgeSecure')}
+                  </span>
+                </div>
+              </motion.div>
+
+              {/* Shared explainer sections — same six sections LandingPage shows */}
+              <SalaryAdvanceInfoSections />
+
+              {/* One declaration, so it sits inline above the CTA. The button
+                  wraps only the box; the copy is a sibling paragraph naming it,
+                  and there is no long-text variant of this wording, so it needs
+                  no "Read more". Absent entirely on the no-PAN flows. */}
               <StickyFooter>
-                {/* Single consent control, naming PAN validation and the CKYC download */}
-                <button
-                  type="button"
-                  role="checkbox"
-                  aria-checked={consentAccepted}
-                  onClick={handleToggleConsent}
-                  className="w-full flex items-start gap-3 mb-4 text-left rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
-                >
-                  <span
-                    className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-[5px] border flex items-center justify-center transition-colors ${
-                      consentAccepted ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
-                    }`}
-                  >
-                    {consentAccepted && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
-                  </span>
-                  <span className="text-[12px] text-[#6b7280] leading-relaxed">
-                    {tr(language, 'hrmsConsentText')}
-                  </span>
-                </button>
+                {consentRequired && (
+                  <div className="mb-3 flex items-start gap-3">
+                    {/* Padding lifts the 20px box to a 24px hit area. Checked state
+                        is signalled by the tick icon, not colour alone. */}
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={consentAccepted}
+                      aria-labelledby="hrms-consent-label"
+                      onClick={handleToggleConsent}
+                      className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                    >
+                      <span
+                        className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
+                          consentAccepted ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
+                        }`}
+                      >
+                        {consentAccepted && (
+                          <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />
+                        )}
+                      </span>
+                    </button>
+                    <p id="hrms-consent-label" className="text-[12px] text-[#6b7280] leading-relaxed">
+                      {tr(language, 'hrmsConsentText')}
+                    </p>
+                  </div>
+                )}
 
                 <button
                   type="button"
@@ -376,6 +426,7 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
                   <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
                 </button>
               </StickyFooter>
+
             </div>
           )}
 

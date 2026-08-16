@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { Sparkles, Check } from 'lucide-react';
 import { Confetti, Laptop } from '@phosphor-icons/react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
@@ -9,6 +9,7 @@ import festivalAdvanceImg from '@/assets/festival-vectorized.svg';
 import gadgetAdvanceImg from '@/assets/gadget-vectorized.svg';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
+import { BottomSheet } from './BottomSheet';
 import { useLanguage } from '../hooks/useLanguage';
 
 interface CreditLine {
@@ -86,7 +87,8 @@ export function SanctionedOffersPage() {
       selectedCount: 'selected',
       totalCredit: 'Total Credit Available',
       validUntil: `Valid until 31st May 2026`,
-      noSelection: 'Select offers to activate your credit lines'
+      termsDeclaration: 'I agree to the terms and conditions for activating my selected credit lines.',
+      readMore: 'Read more'
     },
     Tamil: {
       title: 'நீங்கள் கீழே உள்ள சம்பள முன்பணங்களுக்கு தகுதியுடையவர்',
@@ -98,7 +100,8 @@ export function SanctionedOffersPage() {
       selectedCount: 'தேர்ந்தெடுக்கப்பட்டது',
       totalCredit: 'மொத்த கடன் கிடைக்கும்',
       validUntil: `31 மே 2026 வரை செல்லுபடியாகும்`,
-      noSelection: 'உங்கள் கடன் வரிசைகளை செயல்படுத்த சலுகைகளை தேர்ந்தெடுக்கவும்'
+      termsDeclaration: 'எனது தேர்ந்தெடுக்கப்பட்ட கடன் வரிசைகளை செயல்படுத்துவதற்கான விதிமுறைகள் மற்றும் நிபந்தனைகளை நான் ஏற்கிறேன்.',
+      readMore: 'மேலும் படிக்க'
     }
   };
 
@@ -120,23 +123,16 @@ export function SanctionedOffersPage() {
     setSelectedOffers([]);
   };
 
-  const handleActivate = () => {
-    if (selectedOffers.length > 0) {
-      setShowTermsSheet(true);
-      setAgreedToTerms(false);
-    }
-  };
+  const canActivate = selectedOffers.length > 0 && agreedToTerms;
 
-  const handleProceedAfterTerms = () => {
-    if (agreedToTerms) {
-      setShowTermsSheet(false);
-      // Navigate to processing page with only the IDs (not the full objects with React components)
-      navigate('/credit-line-processing', { 
-        state: { 
-          selectedOffers: selectedOffers // Only pass the IDs array
-        } 
-      });
-    }
+  const handleActivate = () => {
+    if (!canActivate) return;
+    // Navigate to processing page with only the IDs (not the full objects with React components)
+    navigate('/credit-line-processing', {
+      state: {
+        selectedOffers: selectedOffers // Only pass the IDs array
+      }
+    });
   };
 
   const calculateTotalCredit = () => {
@@ -275,111 +271,71 @@ export function SanctionedOffersPage() {
       </main>
 
       <StickyFooter>
+        {/* Terms taken inline, with the full text behind "Read more". The button
+            wraps only the box so the link can run in the same text flow. */}
+        <div className="flex items-start gap-3 mb-3">
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={agreedToTerms}
+            aria-labelledby="offers-terms-label"
+            onClick={() => setAgreedToTerms(!agreedToTerms)}
+            className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+          >
+            <span
+              className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
+                agreedToTerms ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
+              }`}
+            >
+              {agreedToTerms && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
+            </span>
+          </button>
+
+          <p className="text-[12px] text-[#6b7280] leading-relaxed">
+            <span id="offers-terms-label">{t.termsDeclaration}</span>{' '}
+            <button
+              type="button"
+              onClick={() => setShowTermsSheet(true)}
+              className="text-[12px] font-semibold text-[#315C9D] underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+            >
+              {t.readMore}
+            </button>
+          </p>
+        </div>
+
         <motion.button
           initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: selectedOffers.length > 0 ? 1 : 0.4 }}
+          animate={{ y: 0, opacity: canActivate ? 1 : 0.4 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          whileTap={{ scale: selectedOffers.length > 0 ? 0.98 : 1 }}
+          whileTap={{ scale: canActivate ? 0.98 : 1 }}
           onClick={handleActivate}
-          disabled={selectedOffers.length === 0}
+          disabled={!canActivate}
           className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center gap-2 disabled:cursor-not-allowed transition-opacity"
         >
           {selectedOffers.length > 0 ? t.activateBtn : t.selectBtn}
         </motion.button>
-        {selectedOffers.length === 0 && (
-          <p className="text-center text-xs text-gray-500 mt-2">{t.noSelection}</p>
-        )}
       </StickyFooter>
 
-      {/* Terms Sheet */}
-      <AnimatePresence>
-        {showTermsSheet && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              onClick={() => setShowTermsSheet(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
-            />
-
-            {/* Bottom Sheet */}
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-[101] max-h-[85vh] overflow-hidden"
-            >
-              {/* Handle Bar */}
-              <div className="flex justify-center pt-3 pb-2">
-                <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
-              </div>
-
-              {/* Header */}
-              <div className="px-6 pb-4 pt-1 border-b border-gray-200">
-                <h2 className="text-lg font-black text-[#111827] tracking-tight mb-1">
-                  Terms &amp; Conditions
-                </h2>
-                <p className="text-xs text-gray-500">Please read and accept to continue</p>
-              </div>
-
-              {/* Content */}
-              <div className="px-6 py-5 overflow-y-auto max-h-[calc(85vh-180px)]">
-                {/* Terms Text */}
-                <div className="mb-5">
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    I consent and authorize <span className="font-bold text-[#315C9D]">Indian Overseas Bank (IOB)</span> to create and manage the selected credit line(s) on behalf of the <span className="font-bold text-[#315C9D]">Government of Tamil Nadu</span>.
-                  </p>
-                </div>
-              </div>
-
-              {/* Footer - Sticky */}
-              <div className="px-6 pt-4 pb-6 border-t border-gray-200 bg-white">
-                {/* Consent Checkbox */}
-                <button
-                  onClick={() => setAgreedToTerms(!agreedToTerms)}
-                  className="w-full flex items-center gap-3 mb-4 text-left active:scale-[0.99] transition-transform"
-                >
-                  <span className="flex-shrink-0">
-                    {agreedToTerms ? (
-                      <motion.span
-                        initial={{ scale: 0.6, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                        className="w-5 h-5 rounded-[5px] bg-[#315C9D] flex items-center justify-center"
-                      >
-                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                      </motion.span>
-                    ) : (
-                      <span className="block w-5 h-5 rounded-[5px] border-2 border-gray-300"></span>
-                    )}
-                  </span>
-                  <span className="text-[13px] text-gray-700 leading-snug">
-                    I have read and agree to the terms and conditions
-                  </span>
-                </button>
-
-                {/* Proceed Button */}
-                <motion.button
-                  onClick={handleProceedAfterTerms}
-                  disabled={!agreedToTerms}
-                  whileTap={{ scale: agreedToTerms ? 0.98 : 1 }}
-                  className={`w-full h-12 rounded-lg font-semibold text-base transition-colors ${
-                    agreedToTerms
-                      ? 'bg-[#315C9D] text-white'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  Proceed to Activation
-                </motion.button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* Terms sheet — read-only. Acceptance is taken by the checkbox above. */}
+      <BottomSheet
+        open={showTermsSheet}
+        onClose={() => setShowTermsSheet(false)}
+        title="Terms & Conditions"
+        closeLabel={selectedLanguage === 'English' ? 'Close' : 'மூடு'}
+        footer={
+          <button
+            type="button"
+            onClick={() => setShowTermsSheet(false)}
+            className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center active:scale-[0.98] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+          >
+            {selectedLanguage === 'English' ? 'Close' : 'மூடு'}
+          </button>
+        }
+      >
+        <p className="text-sm text-gray-700 leading-relaxed">
+          I consent and authorize <span className="font-bold text-[#315C9D]">Indian Overseas Bank (IOB)</span> to create and manage the selected credit line(s) on behalf of the <span className="font-bold text-[#315C9D]">Government of Tamil Nadu</span>.
+        </p>
+      </BottomSheet>
     </div>
   );
 }

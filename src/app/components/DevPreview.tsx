@@ -32,6 +32,14 @@ interface PageRoute {
 }
 
 const routes: PageRoute[] = [
+  // The five HRMS journeys lead the list. Label and description come straight
+  // from the flow registry so the panel can never drift from HRMS_FLOWS.
+  ...HRMS_FLOW_IDS.map((id) => ({
+    path: `/__flow-${id}`,
+    name: HRMS_FLOWS[id].labelEn,
+    icon: Sparkles,
+    description: HRMS_FLOWS[id].descriptionEn,
+  })),
   { path: '/__flow-ntb-no-ckyc', name: '▶ NTB, No CKYC Number', icon: Sparkles, description: 'Phone → CKYC (don\'t know) → PAN → OTP → Dedupe → Aadhaar → Face → Offers' },
   { path: '/__flow-etb-no-ckyc', name: '▶ ETB, No CKYC Number', icon: Sparkles, description: 'Phone → CKYC (don\'t know) → PAN → OTP → ETB found → Skip Aadhaar → Offers' },
   { path: '/__flow-ntb-no-ckyc-id', name: '▶ NTB, No CKYC Number + Employee ID', icon: Sparkles, description: 'Phone → CKYC (don\'t know) → PAN → OTP → Dedupe → Aadhaar → Face → Employee ID → Offers' },
@@ -40,14 +48,6 @@ const routes: PageRoute[] = [
   { path: '/__flow-etb-knows-ckyc', name: '▶ ETB, User Knows CKYC Number', icon: Sparkles, description: 'Phone → CKYC (knows) → OTP → CKYC pull → PAN (pre-filled) → ETB → Offers' },
   { path: '/__flow-ntb-knows-ckyc-id', name: '▶ NTB, Knows CKYC Number + Employee ID', icon: Sparkles, description: 'Phone → CKYC (knows) → OTP → CKYC pull → PAN → Aadhaar → Face → Employee ID → Offers' },
   { path: '/__flow-etb-knows-ckyc-id', name: '▶ ETB, Knows CKYC Number + Employee ID', icon: Sparkles, description: 'Phone → CKYC (knows) → OTP → CKYC pull → PAN → ETB → Employee ID → Offers' },
-  // Positions 9–13: the five HRMS journeys. Label and description come straight
-  // from the flow registry so the panel can never drift from HRMS_FLOWS.
-  ...HRMS_FLOW_IDS.map((id) => ({
-    path: `/__flow-${id}`,
-    name: HRMS_FLOWS[id].labelEn,
-    icon: Sparkles,
-    description: HRMS_FLOWS[id].descriptionEn,
-  })),
   { path: '/', name: 'Dashboard', icon: Home, description: 'KALANJIYAM home' },
   { path: '/advances-upi', name: 'UPI Landing', icon: FileText, description: 'Advances on UPI intro' },
   { path: '/phone-input', name: 'Phone Input', icon: Phone, description: 'Enter phone number' },

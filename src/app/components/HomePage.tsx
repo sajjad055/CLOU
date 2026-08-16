@@ -16,6 +16,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import kalanjiyamLogo from '@/assets/kalanjiyam-logo.svg';
+import { getActiveFlow, hrmsEntryRoute } from '../flows/hrmsFlows';
 
 type TabId = 'apps' | 'advance';
 
@@ -141,7 +142,7 @@ export function HomePage() {
           <>
             {/* Main feature — Advances on UPI */}
             <button
-              onClick={() => navigate('/advances-upi')}
+              onClick={() => navigate(hrmsEntryRoute(getActiveFlow()) ?? '/advances-upi')}
               className="relative w-full bg-[#315C9D] text-white rounded-2xl px-5 py-4 flex items-center gap-4 mb-6 active:scale-[0.99] transition-transform text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
             >
               <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
@@ -166,7 +167,7 @@ export function HomePage() {
                 return (
                   <div key={item.id} className="relative">
                     <button
-                      onClick={() => navigate('/advances-upi')}
+                      onClick={() => navigate(hrmsEntryRoute(getActiveFlow()) ?? '/advances-upi')}
                       className="w-full flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3 pr-14 shadow-[0_1px_6px_rgba(0,0,0,0.04)] active:scale-[0.99] transition-transform text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
                     >
                       <div className="w-11 h-11 rounded-xl bg-[#315C9D]/10 flex items-center justify-center shrink-0">

@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router';
-import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle, Volume2, ChevronDown, Sun, Glasses, Eye, ScanFace, UserRound } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Check, CheckCircle, Volume2, ChevronDown, Sun, Glasses, Eye, ScanFace, UserRound } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
+import { BottomSheet } from './BottomSheet';
 import { useLanguage } from '../hooks/useLanguage';
 import aadhaarImg from '@/assets/aadhaar.svg';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
@@ -76,8 +77,9 @@ export function AadhaarBiometricPage() {
       aadhaarSubtitle: "Enter your Aadhaar number to begin",
       aadhaarNumberLabel: "Aadhaar Number",
       consentTextFull: "I agree and authorize Indian Overseas Bank to fetch my name, date of birth and photograph from UIDAI, limited to authenticating myself with Aadhaar based authentication system for identity verification in adherence to performing e-kyc.\n\nI understand that Indian Overseas Bank will authenticate my identity through the Aadhaar authentication system for personal loans and/or for other purposes, or as authorised under the Aadhaar Act, 2016.\n\nI understand that Indian Overseas Bank shall ensure security and confidentiality of my personal identity data and prohibit its use other than for submission to the Central Identities Data Repository (CIDR) for authentication.\n\nI hereby authorize Indian Overseas Bank to verify and authenticate using the Aadhaar number provided. I further authorize Indian Overseas Bank to retain my Aadhaar details for authenticated consent or retention of details for any purpose or duration to comply with Aadhaar Act, 2016 and the applicable law.",
+      consentShort: "I authorise Indian Overseas Bank to verify my identity using Aadhaar e-KYC.",
+      readMore: "Read more",
       modalConsentTitle: "Aadhaar Consent",
-      agreeAndContinue: "Accept & Continue",
       startBtn: "Verify",
       faceVerificationReadyTitle: "Proceed to Face Verification",
       faceVerificationReadySubtitle: "Please ensure you are in a well-lit area",
@@ -108,8 +110,9 @@ export function AadhaarBiometricPage() {
       aadhaarSubtitle: "தொடங்க உங்கள் ஆதார் எண்ணை உள்ளிடவும்",
       aadhaarNumberLabel: "ஆதார் எண்",
       consentTextFull: "e-kyc ஐ செய்வதில் இணங்கி அடையாள சரிபார்ப்புக்காக UIDAI இலிருந்து எனது பெயர், பிறந்த தேதி மற்றும் புகைப்படத்தைப் பெற இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் ஒப்புக்கொள்கிறேன்.",
+      consentShort: "ஆதார் e-KYC மூலம் எனது அடையாளத்தைச் சரிபார்க்க இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.",
+      readMore: "மேலும் படிக்க",
       modalConsentTitle: "ஆதார் சம்மதம்",
-      agreeAndContinue: "ஏற்று தொடரவும்",
       startBtn: "சரிபார்",
       faceVerificationReadyTitle: "முக சரிபார்ப்புக்கு தொடரவும்",
       faceVerificationReadySubtitle: "நல்ல வெளிச்சம் உள்ள இடத்தில் இருப்பதை உறுதிப்படுத்தவும்",
@@ -178,9 +181,39 @@ export function AadhaarBiometricPage() {
               </motion.div>
 
               <StickyFooter>
+                {/* Consent is taken inline here — the sheet is only for reading the full text. */}
+                <div className="mb-4 flex items-start gap-3">
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={consent}
+                    aria-labelledby="aadhaar-consent-label"
+                    onClick={() => setConsent(!consent)}
+                    className="flex-shrink-0 mt-0.5 p-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] rounded-md"
+                  >
+                    <span
+                      className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
+                        consent ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
+                      }`}
+                    >
+                      {consent && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
+                    </span>
+                  </button>
+                  <p className="text-[12px] text-[#6b7280] leading-relaxed">
+                    <span id="aadhaar-consent-label">{t.consentShort}</span>{' '}
+                    <button
+                      type="button"
+                      onClick={() => setShowConsentSheet(true)}
+                      className="text-[12px] text-[#315C9D] font-semibold underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] rounded-sm"
+                    >
+                      {t.readMore}
+                    </button>
+                  </p>
+                </div>
+
                 <CTAButton
-                  disabled={aadhaarNumber.replace(/\s/g, '').length !== 12}
-                  onClick={() => { if (aadhaarNumber.replace(/\s/g, '').length === 12) setShowConsentSheet(true); }}
+                  disabled={aadhaarNumber.replace(/\s/g, '').length !== 12 || !consent}
+                  onClick={() => { setStep('face-verification-ready'); setBlinkDetected(false); }}
                 >
                   {t.startBtn}
                 </CTAButton>
@@ -403,8 +436,14 @@ export function AadhaarBiometricPage() {
               <StickyFooter>
                 <div className="space-y-3">
                   <CTAButton onClick={() => setStep('updating-records')}>{t.confirmBtn}</CTAButton>
-                  <button onClick={() => navigate('/kyc-options')}
-                    className="w-full bg-white border border-[#e5e7eb] text-[#111827] h-12 rounded-lg text-base font-semibold hover:bg-[#f9fafb] transition-colors">
+                  {/* Tertiary: no stroke, no fill. Brand-coloured text carries the
+                      affordance, so it reads as secondary to the CTA above without
+                      competing with it. */}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/kyc-options')}
+                    className="w-full h-12 rounded-lg text-base font-semibold text-[#315C9D] hover:bg-[#315C9D]/5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                  >
                     {t.notMeBtn}
                   </button>
                 </div>
@@ -443,70 +482,51 @@ export function AadhaarBiometricPage() {
         </div>
       </main>
 
-      {/* ── Consent Sheet ── */}
-      <AnimatePresence>
-        {showConsentSheet && (
+      {/* ── Consent Sheet — read-only. Consent itself is given by the inline checkbox. ── */}
+      <BottomSheet
+        open={showConsentSheet}
+        onClose={() => setShowConsentSheet(false)}
+        title={t.modalConsentTitle}
+        closeLabel={selectedLanguage === 'English' ? 'Close' : 'மூடு'}
+        toolbar={
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.7 }} exit={{ opacity: 0 }}
-              onClick={() => setShowConsentSheet(false)}
-              className="fixed inset-0 bg-black z-[100]" />
-
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-xl shadow-2xl z-[101] max-h-[85vh] overflow-hidden flex flex-col">
-
-              <div className="flex justify-center pt-3 pb-2">
-                <div className="w-10 h-1 bg-[#d9d9d9] rounded-full" />
+            <div className="px-5 py-3 border-b border-[#e5e7eb]">
+              <div className="relative">
+                <button type="button" onClick={() => setShowModalLanguageMenu(!showModalLanguageMenu)}
+                  aria-expanded={showModalLanguageMenu}
+                  className="w-full bg-transparent border border-[#e5e7eb] rounded-lg px-3 h-11 flex items-center justify-between text-sm font-semibold text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]">
+                  <span>{modalLanguage}</span>
+                  <ChevronDown className={`w-4 h-4 text-[#666666] transition-transform ${showModalLanguageMenu ? 'rotate-180' : ''}`} aria-hidden="true" />
+                </button>
+                {showModalLanguageMenu && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-[#e5e7eb] py-1 z-50 max-h-[200px] overflow-y-auto">
+                    {languages.map((lang) => (
+                      <button type="button" key={lang} onClick={() => { setModalLanguage(lang); setShowModalLanguageMenu(false); }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-[#f9fafb] ${modalLanguage === lang ? 'text-[#315C9D] font-semibold' : 'text-[#111827]'}`}>
+                        {lang}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+            </div>
 
-              <div className="px-6 py-3 border-b border-[#e5e7eb]">
-                <h2 className="text-base font-semibold text-[#111827]">{t.modalConsentTitle}</h2>
+            <div className="px-5 py-3">
+              <div className="flex items-center gap-3">
+                <Volume2 className="w-5 h-5 text-[#315C9D] flex-shrink-0" aria-hidden="true" />
+                <input type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(parseInt(e.target.value))}
+                  aria-label={selectedLanguage === 'English' ? 'Volume' : 'ஒலி அளவு'}
+                  className="flex-1 h-1.5 rounded-lg accent-[#111827] cursor-pointer" />
+                <span className="text-[12px] text-[#666666] font-medium min-w-[32px]">{volume}%</span>
               </div>
-
-              <div className="px-5 py-3 border-b border-[#e5e7eb]">
-                <div className="relative">
-                  <button onClick={() => setShowModalLanguageMenu(!showModalLanguageMenu)}
-                    className="w-full bg-transparent border border-[#e5e7eb] rounded-lg px-3 h-11 flex items-center justify-between text-sm font-semibold text-[#212121]">
-                    <span>{modalLanguage}</span>
-                    <ChevronDown className={`w-4 h-4 text-[#666666] transition-transform ${showModalLanguageMenu ? 'rotate-180' : ''}`} />
-                  </button>
-                  {showModalLanguageMenu && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-[#e5e7eb] py-1 z-50 max-h-[200px] overflow-y-auto">
-                      {languages.map((lang) => (
-                        <button key={lang} onClick={() => { setModalLanguage(lang); setShowModalLanguageMenu(false); }}
-                          className={`w-full text-left px-4 py-2 text-sm hover:bg-[#f9fafb] ${modalLanguage === lang ? 'text-[#315C9D] font-semibold' : 'text-[#111827]'}`}>
-                          {lang}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="px-5 py-3 border-b border-[#e5e7eb]">
-                <div className="flex items-center gap-3">
-                  <Volume2 className="w-5 h-5 text-[#315C9D] flex-shrink-0" />
-                  <input type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(parseInt(e.target.value))}
-                    className="flex-1 h-1.5 rounded-lg accent-[#111827] cursor-pointer" />
-                  <span className="text-[12px] text-[#666666] font-medium min-w-[32px]">{volume}%</span>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto px-6 py-5">
-                <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
-                  {modalLanguage === 'Tamil' ? content.Tamil.consentTextFull : content.English.consentTextFull}
-                </p>
-              </div>
-
-              <div className="px-6 py-5 border-t border-[#e5e7eb]">
-                <CTAButton onClick={() => { setConsent(true); setShowConsentSheet(false); setStep('face-verification-ready'); setBlinkDetected(false); }}>
-                  {modalLanguage === 'Tamil' ? content.Tamil.agreeAndContinue : content.English.agreeAndContinue}
-                </CTAButton>
-              </div>
-            </motion.div>
+            </div>
           </>
-        )}
-      </AnimatePresence>
+        }
+      >
+        <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
+          {modalLanguage === 'Tamil' ? content.Tamil.consentTextFull : content.English.consentTextFull}
+        </p>
+      </BottomSheet>
     </div>
   );
 }

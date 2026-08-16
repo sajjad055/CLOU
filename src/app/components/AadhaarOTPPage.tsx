@@ -311,8 +311,14 @@ export function AadhaarOTPPage() {
               <StickyFooter>
                 <div className="space-y-3">
                   <CTAButton onClick={() => setStep('updating-records')}>{t.confirmBtn}</CTAButton>
-                  <button onClick={() => navigate('/kyc-options')}
-                    className="w-full bg-white border border-[#e5e7eb] text-[#111827] h-12 rounded-lg text-base font-semibold hover:bg-[#f9fafb] transition-colors">
+                  {/* Tertiary: no stroke, no fill. Brand-coloured text carries the
+                      affordance, so it reads as secondary to the CTA above without
+                      competing with it. */}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/kyc-options')}
+                    className="w-full h-12 rounded-lg text-base font-semibold text-[#315C9D] hover:bg-[#315C9D]/5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                  >
                     {t.notMeBtn}
                   </button>
                 </div>

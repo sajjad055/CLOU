@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { ArrowRight, ShieldCheck, Loader2, CheckCircle, Info, Lock, User, CreditCard, Fingerprint, Users, MapPin } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Loader2, CheckCircle, Lock, User, CreditCard, Fingerprint, Users, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
@@ -61,8 +61,9 @@ interface FlowConfig {
 
 /**
  * Config as actually consumed by this screen. `ckycFirst` is an existing-flow
- * concern and the two HRMS-only fields (`dedupeResult`, `panSource`) are
- * `undefined` for every existing flow, so their render blocks are omitted.
+ * concern; `panSource` is HRMS-only and `undefined` for every existing flow, so
+ * its render block is omitted for them. `dedupeResult` is carried but no longer
+ * rendered — the dedupe outcome shows itself through which screens follow.
  */
 type ResolvedConfig = {
   ckycFirst?: boolean;
@@ -103,7 +104,7 @@ export function CKYCCustomerDetailsPage() {
 
   const content = {
     English: {
-      title: 'Review Your Details',
+      title: 'Review details and continue',
       subtitle: 'We fetched these details from your CKYC records. Please review and continue.',
       nameLabel: 'Name',
       panLabel: 'PAN',
@@ -116,7 +117,7 @@ export function CKYCCustomerDetailsPage() {
       continueBtn: 'Continue',
     },
     Tamil: {
-      title: 'உங்கள் விவரங்களை சரிபார்க்கவும்',
+      title: 'விவரங்களைச் சரிபார்த்து தொடரவும்',
       subtitle: 'உங்கள் CKYC பதிவுகளிலிருந்து இந்த விவரங்களைப் பெற்றோம். சரிபார்த்து தொடரவும்.',
       nameLabel: 'பெயர்',
       panLabel: 'PAN',
@@ -203,40 +204,19 @@ export function CKYCCustomerDetailsPage() {
                 <p className="text-sm text-[#6b7280] leading-relaxed">{t.subtitle}</p>
               </motion.div>
 
-              {/* ── Dedupe banner (HRMS flows only) ──
-                  `config.dedupeResult` is undefined for the eight existing flows,
-                  so this block is omitted entirely for them. Icon + text, always
-                  visible: no hover, focus or other interaction required. */}
-              {config.dedupeResult && (
-                <div
-                  className={`rounded-xl border p-4 flex items-start gap-3 mb-4 ${
-                    config.dedupeResult === 'etb'
-                      ? 'bg-[#2da94f]/5 border-[#2da94f]/25'
-                      : 'bg-[#eef3fa] border-[#315C9D]/20'
-                  }`}
-                >
-                  {config.dedupeResult === 'etb' ? (
-                    <CheckCircle className="w-5 h-5 text-[#15803d] flex-shrink-0 mt-0.5" strokeWidth={2.5} aria-hidden="true" />
-                  ) : (
-                    <Info className="w-5 h-5 text-[#315C9D] flex-shrink-0 mt-0.5" strokeWidth={2.5} aria-hidden="true" />
-                  )}
-                  <p className="text-sm font-medium text-[#111827] leading-relaxed">
-                    {config.dedupeResult === 'etb'
-                      ? tr(selectedLanguage, 'dedupeEtbBanner')
-                      : tr(selectedLanguage, 'dedupeNtbBanner')}
-                  </p>
-                </div>
-              )}
+              {/* No dedupe banner. The outcome does not need announcing here —
+                  the journey simply continues into Face RD and CIF creation when
+                  no bank record was found, so the next screens say it by doing it. */}
 
               {/* Details card */}
               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}
-                className="bg-[#f9fafb] border border-[#e5e7eb] rounded-xl overflow-hidden mb-4">
+                className="border border-[#e5e7eb] rounded-xl overflow-hidden mb-4">
                 {detailRows.map((row, i) => {
                   const Icon = row.icon;
                   return (
                     <div key={row.label} className={`flex items-start gap-3 p-4 ${i !== 0 ? 'border-t border-[#e5e7eb]' : ''}`}>
-                      <div className="w-8 h-8 rounded-full bg-[#315C9D]/10 flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-4 h-4 text-[#315C9D]" strokeWidth={2} />
+                      <div className="w-8 h-8 rounded-full bg-[#ebecef] flex items-center justify-center flex-shrink-0">
+                        <Icon className="w-4 h-4 text-[#111827]" strokeWidth={2} />
                       </div>
                       <div className="min-w-0">
                         <p className="text-[11px] font-semibold text-[#666666] uppercase tracking-wide mb-0.5">{row.label}</p>
