@@ -5,6 +5,10 @@
       
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <!-- iOS Safari otherwise auto-links bare numbers (mobile, DOB, account
+           number) into tel: links, which renders them underlined and blue as if
+           they were tappable. Explicit <a href="tel:"> links are unaffected. -->
+      <meta name="format-detection" content="telephone=no, date=no, address=no" />
       <title>CLOU - TN - IOB (Copy)</title>
       <meta name="description" content="Create engaging mobile UI journey pages with customizable designs and features, perfect for app developers looking to enhance user experience." />
       <meta name="robots" content="noindex, nofollow" />

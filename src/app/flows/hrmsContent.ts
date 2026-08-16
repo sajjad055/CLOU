@@ -23,8 +23,8 @@ import type { Language } from '../hooks/useLanguage';
 
 export interface HrmsStrings {
   // ── HRMS details screen — headings and body ──
+  /** Screen-reader heading for the processing phase, which shows no visible title. */
   hrmsDetailsTitle: string;
-  hrmsDetailsSubtitle: string;
   hrmsFetchingTitle: string;
   hrmsFetchingSubtitle: string;
   /** Greeting word, rendered ahead of the fetched employee name. */
@@ -143,8 +143,6 @@ export interface HrmsStrings {
 const English: HrmsStrings = {
   // ── HRMS details screen — headings and body ──
   hrmsDetailsTitle: 'Confirm Your Employee Details',
-  hrmsDetailsSubtitle:
-    "These details were fetched from your employer's HRMS record. Review them and give your consent to continue.",
   hrmsFetchingTitle: 'Fetching Your Employee Details',
   hrmsFetchingSubtitle: 'This takes a few seconds. Please stay on this screen.',
   hrmsGreeting: 'Hello',
@@ -254,8 +252,6 @@ const English: HrmsStrings = {
 const Tamil: HrmsStrings = {
   // ── HRMS details screen — headings and body ──
   hrmsDetailsTitle: 'உங்கள் ஊழியர் விவரங்களை உறுதிப்படுத்தவும்',
-  hrmsDetailsSubtitle:
-    'இந்த விவரங்கள் உங்கள் நிறுவனத்தின் HRMS பதிவிலிருந்து பெறப்பட்டன. அவற்றைச் சரிபார்த்து, தொடர உங்கள் சம்மதத்தை அளிக்கவும்.',
   hrmsFetchingTitle: 'உங்கள் ஊழியர் விவரங்கள் பெறப்படுகின்றன',
   hrmsFetchingSubtitle: 'இதற்கு சில வினாடிகள் ஆகும். இந்தத் திரையிலேயே இருக்கவும்.',
   hrmsGreeting: 'வணக்கம்',

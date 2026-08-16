@@ -271,9 +271,6 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
                 >
                   {tr(language, 'hrmsGreetingLead')}
                 </h1>
-                <p className="text-sm text-[#6b7280] leading-relaxed mt-2">
-                  {tr(language, 'hrmsDetailsSubtitle')}
-                </p>
               </motion.div>
 
               {/* Record could not be retrieved — Requirement 4.10 */}
