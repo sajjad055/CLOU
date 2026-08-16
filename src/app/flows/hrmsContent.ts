@@ -72,6 +72,17 @@ export interface HrmsStrings {
   accountChoiceSelectedMarker: string;
   accountChoiceContinueBtn: string;
 
+  /**
+   * Declaration shown inline above the CTA while "I have an IOB account" is
+   * selected. The account number is what makes both lookups possible, so the
+   * bank-record read and the CKYC download are authorised together here, in
+   * place of the Aadhaar declaration the other option shows.
+   */
+  accountChoiceAccountConsentText: string;
+  accountChoiceAccountConsentTitle: string;
+  /** Full bank-record and CKYC wording, paragraph-separated by `\n\n`. */
+  accountChoiceAccountConsentFull: string;
+
   // ── IOB account entry screen ──
   accountEntryTitle: string;
   accountEntrySubtitle: string;
@@ -180,6 +191,11 @@ const English: HrmsStrings = {
     'We will continue your verification with your Aadhaar and PAN.',
   accountChoiceSelectedMarker: 'Selected',
   accountChoiceContinueBtn: 'Continue',
+  accountChoiceAccountConsentText:
+    'I authorise Indian Overseas Bank to check my bank records and to download my CKYC record for verification.',
+  accountChoiceAccountConsentTitle: 'Bank Record and CKYC Consent',
+  accountChoiceAccountConsentFull:
+    'I authorise Indian Overseas Bank to access and verify the account records held against the account number I have provided, including the name, date of birth, address and PAN recorded against it.\n\nI authorise Indian Overseas Bank to retrieve my Central KYC (CKYC) record from the Central KYC Registry using the identifiers held against my account, and to use the retrieved details for identity verification in this credit application.\n\nI understand that Indian Overseas Bank will keep my personal identity data secure and confidential, and will not use it for any purpose other than verifying my identity and assessing this application.\n\nI confirm that the account number I have provided belongs to me and that I am authorised to permit these checks against it.',
 
   // ── IOB account entry screen ──
   accountEntryTitle: 'Enter Your IOB Account Number',
@@ -289,6 +305,11 @@ const Tamil: HrmsStrings = {
     'உங்கள் ஆதார் மற்றும் PAN மூலம் உங்கள் சரிபார்ப்பைத் தொடர்வோம்.',
   accountChoiceSelectedMarker: 'தேர்ந்தெடுக்கப்பட்டது',
   accountChoiceContinueBtn: 'தொடரவும்',
+  accountChoiceAccountConsentText:
+    'எனது வங்கிப் பதிவுகளைச் சரிபார்க்கவும், சரிபார்ப்புக்காக எனது CKYC பதிவைப் பெறவும் இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
+  accountChoiceAccountConsentTitle: 'வங்கிப் பதிவு மற்றும் CKYC சம்மதம்',
+  accountChoiceAccountConsentFull:
+    'நான் அளித்த கணக்கு எண்ணுக்கு எதிராக உள்ள கணக்குப் பதிவுகளை — அதில் பதிவு செய்யப்பட்ட பெயர், பிறந்த தேதி, முகவரி மற்றும் PAN உள்பட — அணுகி சரிபார்க்க இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.\n\nஎனது கணக்கில் உள்ள அடையாளங்களைப் பயன்படுத்தி மைய KYC (CKYC) பதிவேட்டிலிருந்து எனது CKYC பதிவைப் பெறவும், பெறப்பட்ட விவரங்களை இந்தக் கடன் விண்ணப்பத்தில் அடையாள சரிபார்ப்புக்குப் பயன்படுத்தவும் நான் அனுமதி அளிக்கிறேன்.',
 
   // ── IOB account entry screen ──
   accountEntryTitle: 'உங்கள் IOB கணக்கு எண்ணை உள்ளிடவும்',

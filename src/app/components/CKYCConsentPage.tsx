@@ -150,14 +150,16 @@ export function CKYCConsentPage() {
                   type="button"
                   onClick={() => setCkycOption('know')}
                   className={`w-full text-left border rounded-xl p-4 transition-all ${
-                    ckycOption === 'know' ? 'border-[#315C9D] bg-[#315C9D]/5' : 'border-[#e5e7eb] bg-[#f9fafb]'
+                    ckycOption === 'know' ? 'border-[#2da94f] bg-[#2da94f]/5' : 'border-[#e5e7eb] bg-[#f9fafb]'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      ckycOption === 'know' ? 'border-[#315C9D]' : 'border-[#c4c4c4]'
-                    }`}>
-                      {ckycOption === 'know' && <span className="w-2.5 h-2.5 rounded-full bg-[#315C9D]" />}
+                    {/* Filled green tick when selected, empty ring when not — a
+                        shape change, so state never rests on colour alone. */}
+                    <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                      ckycOption === 'know' ? 'bg-[#2da94f] border-[#2da94f]' : 'bg-white border-[#c4c4c4]'
+                    }`} aria-hidden="true">
+                      {ckycOption === 'know' && <Check className="w-3 h-3 text-white" strokeWidth={3.5} />}
                     </span>
                     <span className="text-sm font-semibold text-[#111827]">{t.knowOption}</span>
                   </div>
@@ -179,14 +181,14 @@ export function CKYCConsentPage() {
                   type="button"
                   onClick={() => setCkycOption('dont-know')}
                   className={`w-full text-left border rounded-xl p-4 transition-all ${
-                    ckycOption === 'dont-know' ? 'border-[#315C9D] bg-[#315C9D]/5' : 'border-[#e5e7eb] bg-[#f9fafb]'
+                    ckycOption === 'dont-know' ? 'border-[#2da94f] bg-[#2da94f]/5' : 'border-[#e5e7eb] bg-[#f9fafb]'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      ckycOption === 'dont-know' ? 'border-[#315C9D]' : 'border-[#c4c4c4]'
-                    }`}>
-                      {ckycOption === 'dont-know' && <span className="w-2.5 h-2.5 rounded-full bg-[#315C9D]" />}
+                    <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                      ckycOption === 'dont-know' ? 'bg-[#2da94f] border-[#2da94f]' : 'bg-white border-[#c4c4c4]'
+                    }`} aria-hidden="true">
+                      {ckycOption === 'dont-know' && <Check className="w-3 h-3 text-white" strokeWidth={3.5} />}
                     </span>
                     <span className="text-sm font-semibold text-[#111827]">{t.dontKnowOption}</span>
                   </div>

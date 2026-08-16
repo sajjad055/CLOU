@@ -34,7 +34,11 @@ import aadhaarImg from '@/assets/aadhaar.svg';
  *   • "I have an IOB account" reveals the account-number field, and continuing
  *     runs the `account-pan-lookup` retrieval in a `processing` phase here.
  *   • "I don't have an IOB account" reveals the optional PAN plus the mandatory
- *     masked Aadhaar field, with the Aadhaar consent declaration above the CTA.
+ *     masked Aadhaar field.
+ *
+ * Either answer carries exactly one declaration, inline above the CTA, and which
+ * one is shown follows the answer: the account path authorises the bank-record
+ * read and the CKYC download it performs here, the other authorises Aadhaar use.
  *
  * `/hrms-account-entry` and `/hrms-pan-aadhaar` stay registered and their
  * components stay in place, so Dev Preview can still open either directly.
@@ -123,9 +127,14 @@ function AccountChoice({ flow }: { flow: HrmsFlowId }) {
   // ── "I don't have an IOB account" — PAN, Aadhaar, consent ──
   const [pan, setPan] = useState(() => readJourney(flow).pan);
   const [panBlurred, setPanBlurred] = useState(false);
-  const [consent, setConsent] = useState(false);
+
+  // ── Consent, one declaration per path ──
+  // Two separate flags rather than one shared one: what each path authorises is
+  // different, so a tick given on one answer must not carry over to the other.
+  const [aadhaarConsent, setAadhaarConsent] = useState(false);
+  const [accountConsent, setAccountConsent] = useState(false);
   // Purely informational: the sheet only shows the full consent wording. It never
-  // sets `consent` and never advances the flow, so the CTA gating is untouched.
+  // sets either flag and never advances the flow, so the CTA gating is untouched.
   const [showConsentSheet, setShowConsentSheet] = useState(false);
 
   // Aadhaar entry with per-digit masking — the same technique as
@@ -173,18 +182,23 @@ function AccountChoice({ flow }: { flow: HrmsFlowId }) {
   // but the CTA is gated on validity from the first keystroke (Requirement 7.3).
   const showPanError = panBlurred && pan.length > 0 && !panWellFormed;
   const noAccountValid =
-    rawAadhaar.length === AADHAAR_LENGTH && consent && panWellFormed;
+    rawAadhaar.length === AADHAAR_LENGTH && aadhaarConsent && panWellFormed;
 
   /**
-   * Hard-disabled with nothing selected, while retrieving, and on the
-   * "don't have account" path until Aadhaar, consent and PAN all pass. On the
-   * "have account" path the control stays activatable below 9 digits so the
-   * short-input error is reachable by mouse, touch and keyboard; it is marked
-   * and styled unavailable instead (Requirements 6.2, 6.4).
+   * Hard-disabled with nothing selected, while retrieving, on the "don't have
+   * account" path until Aadhaar, consent and PAN all pass, and on the "have
+   * account" path until its consent is given — the lookups this screen runs are
+   * exactly what that declaration authorises, so it gates them.
+   *
+   * Digit count is deliberately *not* a hard gate: once consent is given the
+   * control stays activatable below 9 digits so the short-input error is
+   * reachable by mouse, touch and keyboard; it is marked and styled unavailable
+   * instead (Requirements 6.2, 6.4).
    */
   const hardDisabled =
     phase === 'processing' ||
     choice === null ||
+    (choice === 'has-account' && !accountConsent) ||
     (choice === 'no-account' && !noAccountValid);
   const looksUnavailable =
     hardDisabled || (choice === 'has-account' && !isLongEnough);
@@ -364,6 +378,9 @@ function AccountChoice({ flow }: { flow: HrmsFlowId }) {
     if (phase === 'processing' || choice === null) return;
 
     if (choice === 'has-account') {
+      // Consent authorises the lookups, so nothing runs without it.
+      if (!accountConsent) return;
+
       // Too short: stay put, start no retrieval, announce the error (6.4).
       if (!isLongEnough) {
         setShowShortError(true);
@@ -419,6 +436,32 @@ function AccountChoice({ flow }: { flow: HrmsFlowId }) {
     { value: 'has-account', label: tr(language, 'accountChoiceHasAccount') },
     { value: 'no-account', label: tr(language, 'accountChoiceNoAccount') },
   ];
+
+  /**
+   * The declaration that belongs to the selected answer, or `null` while nothing
+   * is selected. Both paths ask for exactly one thing, so either way it stays
+   * inline above the CTA per the consent pattern — what changes with the answer
+   * is *what* is being authorised: bank-record plus CKYC access for the account
+   * path, Aadhaar use for the other.
+   */
+  const consentDeclaration =
+    choice === 'has-account'
+      ? {
+          checked: accountConsent,
+          toggle: () => setAccountConsent((prev) => !prev),
+          text: tr(language, 'accountChoiceAccountConsentText'),
+          sheetTitle: tr(language, 'accountChoiceAccountConsentTitle'),
+          sheetBody: tr(language, 'accountChoiceAccountConsentFull'),
+        }
+      : choice === 'no-account'
+        ? {
+            checked: aadhaarConsent,
+            toggle: () => setAadhaarConsent((prev) => !prev),
+            text: tr(language, 'panAadhaarConsentText'),
+            sheetTitle: tr(language, 'panAadhaarConsentTitle'),
+            sheetBody: tr(language, 'panAadhaarConsentFull'),
+          }
+        : null;
 
   const accountErrorId = 'iob-account-error';
   const aadhaarPlaceholder = tr(language, 'panAadhaarAadhaarPlaceholder');
@@ -497,16 +540,23 @@ function AccountChoice({ flow }: { flow: HrmsFlowId }) {
                     onClick={() => select(option.value)}
                     onKeyDown={(event) => handleKeyDown(event, index)}
                     className={`w-full text-left p-4 flex items-center gap-3 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] disabled:cursor-not-allowed ${
-                      isSelected ? 'bg-[#315C9D]/5' : 'bg-white hover:bg-[#f9fafb]'
+                      isSelected ? 'bg-[#2da94f]/5' : 'bg-white hover:bg-[#f9fafb]'
                     }`}
                   >
+                    {/* Selected reads as a filled green tick, unselected as an
+                        empty ring — a shape change, so the state never rests on
+                        colour alone. */}
                     <span
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        isSelected ? 'border-[#315C9D]' : 'border-[#c4c4c4]'
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                        isSelected
+                          ? 'bg-[#2da94f] border-[#2da94f]'
+                          : 'bg-white border-[#c4c4c4]'
                       }`}
                       aria-hidden="true"
                     >
-                      {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-[#315C9D]" />}
+                      {isSelected && (
+                        <Check className="w-3 h-3 text-white" strokeWidth={3.5} />
+                      )}
                     </span>
 
                     <span className="text-sm font-semibold text-[#111827] min-w-0">
@@ -804,36 +854,39 @@ function AccountChoice({ flow }: { flow: HrmsFlowId }) {
       </main>
 
       <StickyFooter>
-        {/* Aadhaar consent — one declaration, so it stays inline above the CTA
-            per the consent pattern, and only while the path that needs it is
-            selected. The "Read more" link is a sibling of the checkbox, never a
-            child: a button inside a button is invalid HTML and the inner
-            control would be unreachable. */}
-        {choice === 'no-account' && (
+        {/* One declaration either way, so it stays inline above the CTA per the
+            consent pattern, and only once an answer is selected. Its wording
+            follows the answer: the account path authorises the bank-record read
+            and the CKYC download this screen performs, the other path
+            authorises Aadhaar use. The "Read more" link is a sibling of the
+            checkbox, never a child: a button inside a button is invalid HTML and
+            the inner control would be unreachable. */}
+        {consentDeclaration && (
           <div className="mb-3 flex items-start gap-3">
             <button
               type="button"
               role="checkbox"
-              aria-checked={consent}
-              aria-labelledby="pan-aadhaar-consent-label"
-              onClick={() => setConsent(!consent)}
-              className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+              aria-checked={consentDeclaration.checked}
+              aria-labelledby="account-choice-consent-label"
+              disabled={phase === 'processing'}
+              onClick={consentDeclaration.toggle}
+              className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] disabled:cursor-not-allowed"
             >
               <span
                 className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
-                  consent ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
+                  consentDeclaration.checked
+                    ? 'bg-[#315C9D] border-[#315C9D]'
+                    : 'bg-white border-[#c4c4c4]'
                 }`}
               >
-                {consent && (
+                {consentDeclaration.checked && (
                   <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />
                 )}
               </span>
             </button>
 
             <p className="text-[12px] text-[#6b7280] leading-relaxed">
-              <span id="pan-aadhaar-consent-label">
-                {tr(language, 'panAadhaarConsentText')}
-              </span>{' '}
+              <span id="account-choice-consent-label">{consentDeclaration.text}</span>{' '}
               <button
                 type="button"
                 onClick={() => setShowConsentSheet(true)}
@@ -871,12 +924,12 @@ function AccountChoice({ flow }: { flow: HrmsFlowId }) {
       {/* Read-only consent sheet — no footer action, so closing it is the only
           exit and the checkbox above remains the single place consent is given. */}
       <BottomSheet
-        open={showConsentSheet}
+        open={showConsentSheet && consentDeclaration !== null}
         onClose={() => setShowConsentSheet(false)}
-        title={tr(language, 'panAadhaarConsentTitle')}
+        title={consentDeclaration?.sheetTitle ?? ''}
       >
         <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
-          {tr(language, 'panAadhaarConsentFull')}
+          {consentDeclaration?.sheetBody}
         </p>
       </BottomSheet>
     </div>
