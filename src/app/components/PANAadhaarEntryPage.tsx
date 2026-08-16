@@ -57,7 +57,13 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
   // later step restores what was already entered (Requirement 7.9). The Aadhaar
   // consent selection is deliberately not persisted: the journey state shape
   // has no field for it, and a consent statement is re-affirmed on each visit.
-  const [pan, setPan] = useState(() => readJourney(flow).pan);
+  // Only a PAN the customer typed themselves is restored. The journey's `pan`
+  // slot also carries record-derived values (HRMS, account lookup), and those
+  // must never appear pre-filled in an optional field.
+  const [pan, setPan] = useState(() => {
+    const journey = readJourney(flow);
+    return journey.panSource === 'user' ? journey.pan : '';
+  });
   const [panBlurred, setPanBlurred] = useState(false);
   const [consent, setConsent] = useState(false);
   // Purely informational: the sheet only shows the full consent wording. It never

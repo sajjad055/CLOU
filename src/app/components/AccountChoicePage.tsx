@@ -125,7 +125,18 @@ function AccountChoice({ flow }: { flow: HrmsFlowId }) {
   const [showShortError, setShowShortError] = useState(false);
 
   // ── "I don't have an IOB account" — PAN, Aadhaar, consent ──
-  const [pan, setPan] = useState(() => readJourney(flow).pan);
+  /**
+   * Seeded only from a PAN the customer typed here themselves. The journey's
+   * `pan` slot is shared: the account-path lookup writes the account record's
+   * PAN into it, and flows whose HRMS record carries one seed it at the start.
+   * Neither belongs in an optional field the customer is being asked to fill, so
+   * `panSource` gates the restore — back-navigation brings back their own input
+   * and nothing else.
+   */
+  const [pan, setPan] = useState(() => {
+    const journey = readJourney(flow);
+    return journey.panSource === 'user' ? journey.pan : '';
+  });
   const [panBlurred, setPanBlurred] = useState(false);
 
   // ── Consent, one declaration per path ──
