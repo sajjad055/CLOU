@@ -73,15 +73,21 @@ export interface HrmsStrings {
   accountChoiceContinueBtn: string;
 
   /**
-   * Declaration shown inline above the CTA while "I have an IOB account" is
-   * selected. The account number is what makes both lookups possible, so the
-   * bank-record read and the CKYC download are authorised together here, in
-   * place of the Aadhaar declaration the other option shows.
+   * The two declarations shown stacked inline above the CTA while "I have an IOB
+   * account" is selected. They are deliberately separate: reading the bank
+   * record and pulling a CKYC record from the central registry are different
+   * authorisations, so each is given and worded on its own. Both are short
+   * enough for one line; the formal wording sits behind each "Read more".
    */
-  accountChoiceAccountConsentText: string;
-  accountChoiceAccountConsentTitle: string;
-  /** Full bank-record and CKYC wording, paragraph-separated by `\n\n`. */
-  accountChoiceAccountConsentFull: string;
+  accountChoiceBankConsentText: string;
+  accountChoiceBankConsentTitle: string;
+  /** Full bank-record wording, paragraph-separated by `\n\n`. */
+  accountChoiceBankConsentFull: string;
+
+  accountChoiceCkycConsentText: string;
+  accountChoiceCkycConsentTitle: string;
+  /** Full CKYC-registry wording, paragraph-separated by `\n\n`. */
+  accountChoiceCkycConsentFull: string;
 
   // ── IOB account entry screen ──
   accountEntryTitle: string;
@@ -191,11 +197,16 @@ const English: HrmsStrings = {
     'We will continue your verification with your Aadhaar and PAN.',
   accountChoiceSelectedMarker: 'Selected',
   accountChoiceContinueBtn: 'Continue',
-  accountChoiceAccountConsentText:
-    'I authorise Indian Overseas Bank to check my bank records and to download my CKYC record for verification.',
-  accountChoiceAccountConsentTitle: 'Bank Record and CKYC Consent',
-  accountChoiceAccountConsentFull:
-    'I authorise Indian Overseas Bank to access and verify the account records held against the account number I have provided, including the name, date of birth, address and PAN recorded against it.\n\nI authorise Indian Overseas Bank to retrieve my Central KYC (CKYC) record from the Central KYC Registry using the identifiers held against my account, and to use the retrieved details for identity verification in this credit application.\n\nI understand that Indian Overseas Bank will keep my personal identity data secure and confidential, and will not use it for any purpose other than verifying my identity and assessing this application.\n\nI confirm that the account number I have provided belongs to me and that I am authorised to permit these checks against it.',
+  accountChoiceBankConsentText:
+    'I authorise Indian Overseas Bank to check my bank records.',
+  accountChoiceBankConsentTitle: 'Bank Record Consent',
+  accountChoiceBankConsentFull:
+    'I authorise Indian Overseas Bank to access and verify the account records held against the account number I have provided, including the name, date of birth, address and PAN recorded against it.\n\nI confirm that the account number I have provided belongs to me and that I am authorised to permit these checks against it.\n\nI understand that Indian Overseas Bank will keep this data secure and confidential, and will not use it for any purpose other than verifying my identity and assessing this application.',
+  accountChoiceCkycConsentText:
+    'I authorise Indian Overseas Bank to download my CKYC record for verification.',
+  accountChoiceCkycConsentTitle: 'CKYC Consent',
+  accountChoiceCkycConsentFull:
+    'I authorise Indian Overseas Bank to retrieve my Central KYC (CKYC) record from the Central KYC Registry using the identifiers held against my account, and to use the retrieved details for identity verification in this credit application.\n\nI understand that the retrieved record may include my name, date of birth, address, photograph and the identity documents registered against my CKYC identifier.\n\nI understand that Indian Overseas Bank shall ensure the security and confidentiality of the retrieved data and shall not use it for any purpose beyond this application.',
 
   // ── IOB account entry screen ──
   accountEntryTitle: 'Enter Your IOB Account Number',
@@ -305,11 +316,16 @@ const Tamil: HrmsStrings = {
     'உங்கள் ஆதார் மற்றும் PAN மூலம் உங்கள் சரிபார்ப்பைத் தொடர்வோம்.',
   accountChoiceSelectedMarker: 'தேர்ந்தெடுக்கப்பட்டது',
   accountChoiceContinueBtn: 'தொடரவும்',
-  accountChoiceAccountConsentText:
-    'எனது வங்கிப் பதிவுகளைச் சரிபார்க்கவும், சரிபார்ப்புக்காக எனது CKYC பதிவைப் பெறவும் இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
-  accountChoiceAccountConsentTitle: 'வங்கிப் பதிவு மற்றும் CKYC சம்மதம்',
-  accountChoiceAccountConsentFull:
-    'நான் அளித்த கணக்கு எண்ணுக்கு எதிராக உள்ள கணக்குப் பதிவுகளை — அதில் பதிவு செய்யப்பட்ட பெயர், பிறந்த தேதி, முகவரி மற்றும் PAN உள்பட — அணுகி சரிபார்க்க இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.\n\nஎனது கணக்கில் உள்ள அடையாளங்களைப் பயன்படுத்தி மைய KYC (CKYC) பதிவேட்டிலிருந்து எனது CKYC பதிவைப் பெறவும், பெறப்பட்ட விவரங்களை இந்தக் கடன் விண்ணப்பத்தில் அடையாள சரிபார்ப்புக்குப் பயன்படுத்தவும் நான் அனுமதி அளிக்கிறேன்.',
+  accountChoiceBankConsentText:
+    'எனது வங்கிப் பதிவுகளைச் சரிபார்க்க இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
+  accountChoiceBankConsentTitle: 'வங்கிப் பதிவு சம்மதம்',
+  accountChoiceBankConsentFull:
+    'நான் அளித்த கணக்கு எண்ணுக்கு எதிராக உள்ள கணக்குப் பதிவுகளை — அதில் பதிவு செய்யப்பட்ட பெயர், பிறந்த தேதி, முகவரி மற்றும் PAN உள்பட — அணுகி சரிபார்க்க இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.\n\nநான் அளித்த கணக்கு எண் எனக்குச் சொந்தமானது என்பதையும், இந்தச் சரிபார்ப்புகளுக்கு அனுமதி அளிக்க எனக்கு உரிமை உள்ளது என்பதையும் உறுதிப்படுத்துகிறேன்.',
+  accountChoiceCkycConsentText:
+    'சரிபார்ப்புக்காக எனது CKYC பதிவைப் பெற இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
+  accountChoiceCkycConsentTitle: 'CKYC சம்மதம்',
+  accountChoiceCkycConsentFull:
+    'எனது கணக்கில் உள்ள அடையாளங்களைப் பயன்படுத்தி மைய KYC (CKYC) பதிவேட்டிலிருந்து எனது CKYC பதிவைப் பெறவும், பெறப்பட்ட விவரங்களை இந்தக் கடன் விண்ணப்பத்தில் அடையாள சரிபார்ப்புக்குப் பயன்படுத்தவும் இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.\n\nபெறப்படும் பதிவில் எனது பெயர், பிறந்த தேதி, முகவரி, புகைப்படம் மற்றும் எனது CKYC அடையாளத்தில் பதிவு செய்யப்பட்ட ஆவணங்கள் இருக்கக்கூடும் என்பதை நான் புரிந்துகொள்கிறேன்.',
 
   // ── IOB account entry screen ──
   accountEntryTitle: 'உங்கள் IOB கணக்கு எண்ணை உள்ளிடவும்',
