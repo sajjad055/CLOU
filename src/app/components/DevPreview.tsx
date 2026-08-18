@@ -77,6 +77,14 @@ const routes: PageRoute[] = [
  */
 const VISIBLE_COUNT = 5;
 
+/**
+ * Temporarily hides the "View all" toggle, and with it every entry past the
+ * first five. Nothing is deleted: the `routes` entries and the toggle markup are
+ * intact, and flipping this back to `true` restores them. Kept as a flag rather
+ * than commented-out code so the hidden path still compiles and cannot rot.
+ */
+const SHOW_ALL_TOGGLE = false;
+
 export function DevPreview() {
   const [isOpen, setIsOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -123,8 +131,11 @@ export function DevPreview() {
     setIsOpen(false);
   };
 
-  const visibleRoutes = showAll ? routes : routes.slice(0, VISIBLE_COUNT);
-  const hiddenCount = routes.length - VISIBLE_COUNT;
+  // With the toggle hidden `showAll` can never be set, so the list stays capped
+  // at the five HRMS journeys.
+  const visibleRoutes =
+    SHOW_ALL_TOGGLE && showAll ? routes : routes.slice(0, VISIBLE_COUNT);
+  const hiddenCount = SHOW_ALL_TOGGLE ? routes.length - VISIBLE_COUNT : 0;
 
   return (
     <>
