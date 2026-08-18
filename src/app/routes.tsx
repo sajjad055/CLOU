@@ -29,6 +29,7 @@ import { UPIConnectionPage } from "./components/UPIConnectionPage";
 import { PhonePeAppMock } from "./components/PhonePeAppMock";
 import { CreditLineDashboard } from "./components/CreditLineDashboard";
 import { HRMSDetailsPage } from "./components/HRMSDetailsPage";
+import { DedupeOutcomePage } from "./components/DedupeOutcomePage";
 import { PANAadhaarEntryPage } from "./components/PANAadhaarEntryPage";
 import { Layout } from "./components/Layout";
 
@@ -162,6 +163,10 @@ export const router = createBrowserRouter([
       {
         path: "hrms-details",
         Component: HRMSDetailsPage,
+      },
+      {
+        path: "hrms-dedupe-outcome",
+        Component: DedupeOutcomePage,
       },
       {
         path: "hrms-pan-aadhaar",

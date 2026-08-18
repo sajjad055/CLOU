@@ -38,6 +38,7 @@ export type HrmsStepId =
   | 'hrms-fetch' // phase of /hrms-details
   | 'hrms-details' // review + consent phase of /hrms-details
   | 'mobile-dedupe' // processing phase of /hrms-details (all five flows)
+  | 'dedupe-outcome' // /hrms-dedupe-outcome
   | 'pan-aadhaar-entry' // /hrms-pan-aadhaar
   | 'aadhaar' // /aadhaar-verification (one or more segments)
   | 'ckyc-otp' // /otp-verification
@@ -394,7 +395,7 @@ const hrmsNopanEtb: HrmsFlowDefinition = {
   id: 'hrms-nopan-etb',
   labelEn: '▶ HRMS No PAN, ETB (bank record has PAN)',
   descriptionEn:
-    'HRMS fetch → HRMS details → Mobile dedupe + PAN from bank record + CKYC ID → CKYC consent + OTP → CKYC details (ETB) → Offers',
+    'HRMS fetch → HRMS details → Mobile dedupe + PAN from bank record → Dedupe outcome + CKYC consent → OTP → CKYC details (ETB) → Offers',
   entryRoute: '/hrms-details',
   hrmsPanPresent: false,
   dedupe: 'etb',
@@ -409,11 +410,21 @@ const hrmsNopanEtb: HrmsFlowDefinition = {
     },
     // `review` renders the "not available" PAN label for this flow.
     { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/hrms-details' },
+    // The CKYC identifier retrieval that used to sit here has moved behind the
+    // outcome screen's consent: this flow's landing card said no PAN was
+    // available, so the dedupe finding one is news worth stating before
+    // anything is done with it.
     {
       id: 'mobile-dedupe',
       route: '/hrms-details',
       phase: 'processing',
-      processing: [mobileDedupe, bankRecordPanFound, ckycId],
+      processing: [mobileDedupe, bankRecordPanFound],
+      next: '/hrms-dedupe-outcome',
+    },
+    {
+      id: 'dedupe-outcome',
+      route: '/hrms-dedupe-outcome',
+      processing: [ckycId],
       next: '/otp-verification',
     },
     { id: 'ckyc-otp', route: '/otp-verification', next: '/ckyc-customer-details' },

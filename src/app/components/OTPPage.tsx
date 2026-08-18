@@ -6,7 +6,7 @@ import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
 import { BottomSheet } from './BottomSheet';
 import { useLanguage } from '../hooks/useLanguage';
-import { getActiveFlow, hrmsNextRoute } from '../flows/hrmsFlows';
+import { getActiveFlow, hasStep, hrmsNextRoute } from '../flows/hrmsFlows';
 import { tr } from '../flows/hrmsContent';
 
 export function OTPPage() {
@@ -24,19 +24,22 @@ export function OTPPage() {
    * existing flows and for any unrecognised value — so existing flows never
    * take the HRMS branch below.
    */
-  const hrmsNext = hrmsNextRoute(getActiveFlow(), 'ckyc-otp');
+  const activeFlow = getActiveFlow();
+  const hrmsNext = hrmsNextRoute(activeFlow, 'ckyc-otp');
 
   /**
-   * CKYC-download consent, HRMS flows only.
+   * Whether this screen is the place the CKYC-download declaration is taken.
    *
-   * These flows reach this screen with a PAN already in hand — from HRMS, or
-   * from the bank record the mobile dedupe matched — and this OTP is what
-   * confirms the download. So the declaration belongs here, immediately above
-   * it: consent, then the OTP that confirms the consent.
+   * True for the HRMS flows that arrive here with a PAN already in hand and no
+   * earlier screen to explain the download. False for a flow declaring
+   * `dedupe-outcome`: that screen states what the dedupe found and takes the
+   * declaration there, where the reason for it is on screen, so repeating it
+   * above a keypad would be asking twice for the same thing.
    *
-   * Both the declaration and the sheet are gated on `hrmsNext`, so nothing about
-   * this screen changes for the eight legacy flows.
+   * Also false for all eight legacy flows, so nothing about this screen changes
+   * for them.
    */
+  const takesCkycConsent = Boolean(hrmsNext) && !hasStep(activeFlow, 'dedupe-outcome');
   const [ckycConsent, setCkycConsent] = useState(false);
   // Read-only: shows the full wording, sets no consent, advances nothing.
   const [showConsentSheet, setShowConsentSheet] = useState(false);
@@ -99,8 +102,9 @@ export function OTPPage() {
     if (hrmsNext) {
       if (verifying) return;
       // The CTA is rendered disabled without consent; guarded here too, so an
-      // activation that slips through downloads nothing.
-      if (!ckycConsent) return;
+      // activation that slips through downloads nothing. Where the declaration
+      // was already taken on the outcome screen there is nothing to gate on.
+      if (takesCkycConsent && !ckycConsent) return;
       if (otp.join('').replace(/\D/g, '').length !== 6) {
         setOtpError(true);
         return;
@@ -235,7 +239,7 @@ export function OTPPage() {
             pattern. The "Read more" link is a sibling of the checkbox, never a
             child: a button inside a button is invalid HTML and the inner control
             would be unreachable. */}
-        {hrmsNext && (
+        {takesCkycConsent && (
           <div className="mb-3 flex items-start gap-3">
             <button
               type="button"
@@ -273,7 +277,11 @@ export function OTPPage() {
 
         <button
           onClick={handleVerify}
-          disabled={hrmsNext ? verifying || !ckycConsent : !isOtpComplete || verifying}
+          disabled={
+            hrmsNext
+              ? verifying || (takesCkycConsent && !ckycConsent)
+              : !isOtpComplete || verifying
+          }
           className="w-full bg-[#315C9D] text-white h-12 rounded-lg text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
         >
           {verifying ? (
@@ -293,7 +301,7 @@ export function OTPPage() {
       {/* Read-only consent wording. No footer action, so closing it is the only
           exit and the checkbox stays the single place consent is given. */}
       <BottomSheet
-        open={showConsentSheet}
+        open={showConsentSheet && takesCkycConsent}
         onClose={() => setShowConsentSheet(false)}
         title={tr(selectedLanguage, 'ckycPanConsentTitle')}
       >

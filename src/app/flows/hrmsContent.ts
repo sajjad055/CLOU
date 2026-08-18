@@ -69,6 +69,25 @@ export interface HrmsStrings {
   hrmsBadgeInstant: string;
   hrmsBadgeSecure: string;
 
+  // ── Dedupe outcome screen ──
+  /**
+   * States what the mobile dedupe found, on the flow whose landing card had to
+   * say no PAN was available. Finding one changes what happens next, so it is
+   * stated plainly rather than left to scroll past in a progress row — and the
+   * CKYC declaration is taken here, where the reason for it is on screen.
+   */
+  dedupeOutcomeBadge: string;
+  dedupeOutcomeTitle: string;
+  dedupeOutcomeSubtitle: string;
+  /** Names how the match was made, so the check is not opaque. */
+  dedupeOutcomeMatchedLabel: string;
+  /** The one thing still outstanding, listed under the heading. */
+  dedupeOutcomeRemainingLabel: string;
+  dedupeOutcomeRemainingDetail: string;
+  dedupeOutcomeContinueBtn: string;
+  /** Progress label while the CKYC identifier is retrieved after consent. */
+  dedupeOutcomeRetrieving: string;
+
   // ── PAN + Aadhaar entry screen ──
   panAadhaarTitle: string;
   panAadhaarSubtitle: string;
@@ -163,6 +182,18 @@ const English: HrmsStrings = {
   hrmsBadgeInstant: 'Get credit instantly',
   hrmsBadgeSecure: 'Safe and Secure',
 
+  // ── Dedupe outcome screen ──
+  dedupeOutcomeBadge: 'Existing IOB customer',
+  dedupeOutcomeTitle: "You're already an IOB customer",
+  dedupeOutcomeSubtitle:
+    'Your application is almost complete. We found the details we needed in your bank record, so there is nothing more for you to enter.',
+  dedupeOutcomeMatchedLabel: 'Matched using your registered mobile number',
+  dedupeOutcomeRemainingLabel: 'One step left',
+  dedupeOutcomeRemainingDetail:
+    'We need to check your CKYC record to finish verifying your identity.',
+  dedupeOutcomeContinueBtn: 'Continue',
+  dedupeOutcomeRetrieving: 'Retrieving your CKYC identifier…',
+
   // ── PAN + Aadhaar entry screen ──
   panAadhaarTitle: 'Enter Your PAN and Aadhaar',
   panAadhaarSubtitle:
@@ -250,6 +281,18 @@ const Tamil: HrmsStrings = {
   hrmsBankName: 'இந்தியன் ஓவர்சீஸ் வங்கி',
   hrmsBadgeInstant: 'உடனடி கடன்',
   hrmsBadgeSecure: 'பாதுகாப்பானது',
+
+  // ── Dedupe outcome screen ──
+  dedupeOutcomeBadge: 'ஏற்கனவே உள்ள IOB வாடிக்கையாளர்',
+  dedupeOutcomeTitle: 'நீங்கள் ஏற்கனவே IOB வாடிக்கையாளர்',
+  dedupeOutcomeSubtitle:
+    'உங்கள் விண்ணப்பம் கிட்டத்தட்ட முடிந்தது. தேவையான விவரங்களை உங்கள் வங்கிப் பதிவில் நாங்கள் கண்டோம், எனவே நீங்கள் மேலும் எதையும் உள்ளிடத் தேவையில்லை.',
+  dedupeOutcomeMatchedLabel: 'உங்கள் பதிவு செய்யப்பட்ட மொபைல் எண் மூலம் பொருந்தியது',
+  dedupeOutcomeRemainingLabel: 'ஒரு படி மட்டுமே',
+  dedupeOutcomeRemainingDetail:
+    'உங்கள் அடையாளச் சரிபார்ப்பை முடிக்க உங்கள் CKYC பதிவைச் சரிபார்க்க வேண்டும்.',
+  dedupeOutcomeContinueBtn: 'தொடரவும்',
+  dedupeOutcomeRetrieving: 'உங்கள் CKYC அடையாள எண் பெறப்படுகிறது…',
 
   // ── PAN + Aadhaar entry screen ──
   panAadhaarTitle: 'உங்கள் PAN மற்றும் ஆதார் எண்ணை உள்ளிடவும்',
