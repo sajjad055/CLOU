@@ -208,7 +208,7 @@ const English: HrmsStrings = {
   dedupeOutcomeRetrieving: 'Retrieving your CKYC identifier…',
 
   // ── PAN + Aadhaar entry screen ──
-  panAadhaarTitle: 'Enter Your PAN and Aadhaar',
+  panAadhaarTitle: 'Verify your identity',
   panAadhaarSubtitle:
     'Your Aadhaar number is required for identity verification. Adding your PAN is optional.',
   panAadhaarPanLabel: 'PAN',
@@ -312,7 +312,7 @@ const Tamil: HrmsStrings = {
   dedupeOutcomeRetrieving: 'உங்கள் CKYC அடையாள எண் பெறப்படுகிறது…',
 
   // ── PAN + Aadhaar entry screen ──
-  panAadhaarTitle: 'உங்கள் PAN மற்றும் ஆதார் எண்ணை உள்ளிடவும்',
+  panAadhaarTitle: 'உங்கள் அடையாளத்தைச் சரிபார்க்கவும்',
   panAadhaarSubtitle:
     'அடையாள சரிபார்ப்புக்கு உங்கள் ஆதார் எண் தேவை. PAN ஐ வழங்குவது விருப்பத்திற்குரியது.',
   panAadhaarPanLabel: 'PAN',
