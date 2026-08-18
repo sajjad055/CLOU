@@ -26,6 +26,13 @@ export interface HrmsJourneyState {
   flow: HrmsFlowId;
   /** Bank-record check consent, given on the landing screen to authorise the dedupe. */
   consentAccepted: boolean;
+  /**
+   * CKYC-download consent, given on the landing screen too — but only by the
+   * flows arriving there with a PAN already in hand, which are the only ones that
+   * can authorise a CKYC pull that early. The others take it later, on the screen
+   * where their identifier becomes known.
+   */
+  ckycConsentAccepted: boolean;
   /** 12 digits, unmasked, captured on PAN_Aadhaar_Entry_Screen or AadhaarVerificationPage. */
   aadhaarNumber: string;
   /** '' when no PAN is available. */
@@ -55,6 +62,7 @@ function freshState(flow: HrmsFlowId): HrmsJourneyState {
   return {
     flow,
     consentAccepted: false,
+    ckycConsentAccepted: false,
     aadhaarNumber: '',
     pan: hrmsPanPresent ? HRMS_EMPLOYEE.pan : '',
     panSource: hrmsPanPresent ? 'hrms' : 'none',
@@ -75,6 +83,7 @@ function isJourneyState(value: unknown, flow: HrmsFlowId): value is HrmsJourneyS
     // Staleness gate: state written under a different flow is discarded.
     state.flow === flow &&
     typeof state.consentAccepted === 'boolean' &&
+    typeof state.ckycConsentAccepted === 'boolean' &&
     typeof state.aadhaarNumber === 'string' &&
     typeof state.pan === 'string' &&
     PAN_SOURCES.includes(state.panSource as HrmsJourneyState['panSource']) &&

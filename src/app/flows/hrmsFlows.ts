@@ -284,7 +284,7 @@ const hrmsPanEtb: HrmsFlowDefinition = {
   id: 'hrms-pan-etb',
   labelEn: '▶ HRMS PAN Present, ETB',
   descriptionEn:
-    'HRMS fetch → HRMS details → Mobile dedupe + CKYC ID → CKYC consent + OTP → CKYC details (ETB) → Offers',
+    'HRMS fetch → HRMS details + both consents → OTP → Mobile dedupe + CKYC ID → CKYC details (ETB) → Offers',
   entryRoute: '/hrms-details',
   hrmsPanPresent: true,
   dedupe: 'etb',
@@ -296,15 +296,19 @@ const hrmsPanEtb: HrmsFlowDefinition = {
       processing: [hrmsFetch],
       next: '/hrms-details',
     },
-    { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/hrms-details' },
+    // The HRMS record already carries a PAN, so both the bank-record check and
+    // the CKYC download can be authorised on this screen. The customer confirms
+    // them with the OTP, and only then does any lookup run — so this flow asks
+    // for everything up front and shows nothing but progress afterwards.
+    { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/otp-verification' },
+    // Both lookups run here, after the OTP has confirmed the consents given on
+    // the previous screen.
     {
-      id: 'mobile-dedupe',
-      route: '/hrms-details',
-      phase: 'processing',
+      id: 'ckyc-otp',
+      route: '/otp-verification',
       processing: [mobileDedupe, ckycId],
-      next: '/otp-verification',
+      next: '/ckyc-customer-details',
     },
-    { id: 'ckyc-otp', route: '/otp-verification', next: '/ckyc-customer-details' },
     { id: 'ckyc-details', route: '/ckyc-customer-details', next: '/sanctioned-offers' },
     { id: 'offers', route: '/sanctioned-offers', next: null },
   ],
@@ -324,7 +328,7 @@ const hrmsPanNtb: HrmsFlowDefinition = {
   id: 'hrms-pan-ntb',
   labelEn: '▶ HRMS PAN Present, NTB',
   descriptionEn:
-    'HRMS fetch → HRMS details → Mobile dedupe + CKYC ID → CKYC consent + OTP → CKYC details (NTB) → Aadhaar + Face → CIF → Offers',
+    'HRMS fetch → HRMS details + both consents → OTP → Mobile dedupe + CKYC ID → CKYC details (NTB) → Aadhaar + Face → CIF → Offers',
   entryRoute: '/hrms-details',
   hrmsPanPresent: true,
   dedupe: 'ntb',
@@ -336,15 +340,16 @@ const hrmsPanNtb: HrmsFlowDefinition = {
       processing: [hrmsFetch],
       next: '/hrms-details',
     },
-    { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/hrms-details' },
+    // Same shape as flow 1: PAN in hand, so both consents are taken here and
+    // confirmed by the OTP before either lookup runs. What differs is only what
+    // the dedupe finds — no record — and therefore what follows the review.
+    { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/otp-verification' },
     {
-      id: 'mobile-dedupe',
-      route: '/hrms-details',
-      phase: 'processing',
+      id: 'ckyc-otp',
+      route: '/otp-verification',
       processing: [mobileDedupe, ckycId],
-      next: '/otp-verification',
+      next: '/ckyc-customer-details',
     },
-    { id: 'ckyc-otp', route: '/otp-verification', next: '/ckyc-customer-details' },
     { id: 'ckyc-details', route: '/ckyc-customer-details', next: '/aadhaar-verification' },
     // Segment 0: `cif-create` is rendered by `updating-records`.
     {

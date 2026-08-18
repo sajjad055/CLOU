@@ -1,12 +1,11 @@
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Shield, ArrowRight, Pencil, Loader2, AlertCircle, Check } from 'lucide-react';
+import { Shield, ArrowRight, Pencil, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
-import { BottomSheet } from './BottomSheet';
 import { useLanguage } from '../hooks/useLanguage';
-import { getActiveFlow, hasStep, hrmsNextRoute } from '../flows/hrmsFlows';
+import { getActiveFlow, hrmsNextRoute, hrmsProcessing } from '../flows/hrmsFlows';
 import { tr } from '../flows/hrmsContent';
 
 export function OTPPage() {
@@ -28,21 +27,20 @@ export function OTPPage() {
   const hrmsNext = hrmsNextRoute(activeFlow, 'ckyc-otp');
 
   /**
-   * Whether this screen is the place the CKYC-download declaration is taken.
+   * Lookups this OTP authorises, rendered as progress rows once it is verified.
    *
-   * True for the HRMS flows that arrive here with a PAN already in hand and no
-   * earlier screen to explain the download. False for a flow declaring
-   * `dedupe-outcome`: that screen states what the dedupe found and takes the
-   * declaration there, where the reason for it is on screen, so repeating it
-   * above a keypad would be asking twice for the same thing.
+   * Non-empty for the flows that arrive here having already consented on the
+   * landing screen: the OTP confirms those consents, so the mobile dedupe and
+   * CKYC identifier retrieval run after it rather than before. Empty for the
+   * flow that goes through the dedupe-outcome screen (its lookups already ran)
+   * and for all eight legacy flows, which keep their existing behaviour.
    *
-   * Also false for all eight legacy flows, so nothing about this screen changes
-   * for them.
+   * No consent declaration lives on this screen: every flow reaching it has
+   * given the CKYC declaration somewhere the reason for it was on display.
    */
-  const takesCkycConsent = Boolean(hrmsNext) && !hasStep(activeFlow, 'dedupe-outcome');
-  const [ckycConsent, setCkycConsent] = useState(false);
-  // Read-only: shows the full wording, sets no consent, advances nothing.
-  const [showConsentSheet, setShowConsentSheet] = useState(false);
+  const postOtpSteps = hrmsProcessing(activeFlow, 'ckyc-otp');
+  const [stepIndex, setStepIndex] = useState(0);
+  const [completed, setCompleted] = useState<string[]>([]);
 
   useEffect(() => { inputRefs.current[0]?.focus(); }, []);
 
@@ -101,17 +99,18 @@ export function OTPPage() {
     // HRMS branch, checked first. Accepts any six-digit value.
     if (hrmsNext) {
       if (verifying) return;
-      // The CTA is rendered disabled without consent; guarded here too, so an
-      // activation that slips through downloads nothing. Where the declaration
-      // was already taken on the outcome screen there is nothing to gate on.
-      if (takesCkycConsent && !ckycConsent) return;
       if (otp.join('').replace(/\D/g, '').length !== 6) {
         setOtpError(true);
         return;
       }
       setOtpError(false);
       setVerifying(true);
-      setTimeout(() => navigate(hrmsNext), 1200);
+      // Flows with lookups attached to this step run them here; the progress
+      // effect below owns the navigation once they finish. The rest navigate
+      // straight through, as before.
+      if (postOtpSteps.length === 0) {
+        setTimeout(() => navigate(hrmsNext), 1200);
+      }
       return;
     }
 
@@ -127,6 +126,29 @@ export function OTPPage() {
   };
 
   const isOtpComplete = otp.every((d) => d !== '');
+
+  /**
+   * Runs the post-OTP lookups one row at a time, then navigates. Timers are
+   * cleared on unmount, so a back press mid-lookup advances nothing.
+   */
+  useEffect(() => {
+    if (!verifying || !hrmsNext || postOtpSteps.length === 0) return;
+
+    if (stepIndex >= postOtpSteps.length) {
+      const timer = setTimeout(() => navigate(hrmsNext), 400);
+      return () => clearTimeout(timer);
+    }
+
+    const current = postOtpSteps[stepIndex];
+    const timer = setTimeout(() => {
+      setCompleted((prev) => [...prev, current.id]);
+      setStepIndex((prev) => prev + 1);
+    }, current.durationMs);
+    return () => clearTimeout(timer);
+    // `postOtpSteps` is derived from the active flow, which cannot change while
+    // this screen is mounted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verifying, stepIndex, hrmsNext, navigate]);
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -214,6 +236,38 @@ export function OTPPage() {
             </div>
           </motion.div>
 
+          {/* Lookups the confirmed OTP authorised. Each row carries an icon and
+              text as well as colour, and future rows stay hidden until reached. */}
+          {verifying && postOtpSteps.length > 0 && (
+            <div className="space-y-3 mb-6" aria-live="polite">
+              {postOtpSteps.map((step, index) => {
+                const isCompleted = completed.includes(step.id);
+                const isActive = stepIndex === index && !isCompleted;
+                if (!isCompleted && !isActive) return null;
+
+                return (
+                  <div
+                    key={step.id}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${
+                      isCompleted
+                        ? 'bg-[#2da94f]/5 border-[#2da94f]/20'
+                        : 'bg-[#315C9D]/5 border-[#315C9D]/20'
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle className="w-5 h-5 text-[#2da94f] flex-shrink-0" strokeWidth={2.5} aria-hidden="true" />
+                    ) : (
+                      <Loader2 className="w-5 h-5 text-[#315C9D] animate-spin flex-shrink-0" strokeWidth={2.5} aria-hidden="true" />
+                    )}
+                    <span className={`text-sm font-medium ${isCompleted ? 'text-[#2da94f]' : 'text-[#315C9D]'}`}>
+                      {selectedLanguage === 'English' ? step.labelEn : step.labelTa}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* Security card */}
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }}
             className="bg-[#f9fafb] border border-[#e5e7eb] rounded-lg p-4 flex items-start gap-3">
@@ -235,53 +289,10 @@ export function OTPPage() {
       </main>
 
       <StickyFooter>
-        {/* One declaration, so it stays inline above the CTA per the consent
-            pattern. The "Read more" link is a sibling of the checkbox, never a
-            child: a button inside a button is invalid HTML and the inner control
-            would be unreachable. */}
-        {takesCkycConsent && (
-          <div className="mb-3 flex items-start gap-3">
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={ckycConsent}
-              aria-labelledby="ckyc-pan-consent-label"
-              onClick={() => setCkycConsent(!ckycConsent)}
-              className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
-            >
-              <span
-                className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
-                  ckycConsent ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
-                }`}
-              >
-                {ckycConsent && (
-                  <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />
-                )}
-              </span>
-            </button>
-
-            <p className="text-[12px] text-[#6b7280] leading-relaxed">
-              <span id="ckyc-pan-consent-label">
-                {tr(selectedLanguage, 'ckycPanConsentText')}
-              </span>{' '}
-              <button
-                type="button"
-                onClick={() => setShowConsentSheet(true)}
-                className="text-[12px] font-semibold text-[#315C9D] underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
-              >
-                {tr(selectedLanguage, 'panAadhaarReadMore')}
-              </button>
-            </p>
-          </div>
-        )}
 
         <button
           onClick={handleVerify}
-          disabled={
-            hrmsNext
-              ? verifying || (takesCkycConsent && !ckycConsent)
-              : !isOtpComplete || verifying
-          }
+          disabled={hrmsNext ? verifying : !isOtpComplete || verifying}
           className="w-full bg-[#315C9D] text-white h-12 rounded-lg text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
         >
           {verifying ? (
@@ -298,17 +309,6 @@ export function OTPPage() {
         </button>
       </StickyFooter>
 
-      {/* Read-only consent wording. No footer action, so closing it is the only
-          exit and the checkbox stays the single place consent is given. */}
-      <BottomSheet
-        open={showConsentSheet && takesCkycConsent}
-        onClose={() => setShowConsentSheet(false)}
-        title={tr(selectedLanguage, 'ckycPanConsentTitle')}
-      >
-        <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
-          {tr(selectedLanguage, 'ckycPanConsentFull')}
-        </p>
-      </BottomSheet>
     </div>
   );
 }

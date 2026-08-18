@@ -119,10 +119,24 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
   const [consentAccepted, setConsentAccepted] = useState(
     () => readJourney(flow).consentAccepted,
   );
+  const [ckycConsentAccepted, setCkycConsentAccepted] = useState(
+    () => readJourney(flow).ckycConsentAccepted,
+  );
 
   // Read-only: the sheet shows the full wording and nothing else. It never sets
   // consent and never advances the flow, so the CTA gating is untouched.
-  const [showConsentSheet, setShowConsentSheet] = useState(false);
+  // `null` when closed, otherwise which declaration's wording is showing.
+  const [readMoreFor, setReadMoreFor] = useState<'bank' | 'ckyc' | null>(null);
+
+  /**
+   * The gating sheet, used only by the flows taking two declarations here.
+   *
+   * `consent-declaration-pattern.md` sends two declarations on a heavy screen to
+   * a sheet on continue, and this screen is heavy — the whole explainer set sits
+   * above the CTA. So for those flows the sheet holds both checkboxes and the
+   * action that advances; the single-declaration flows keep theirs inline.
+   */
+  const [showGateSheet, setShowGateSheet] = useState(false);
 
   const fetchSteps = useMemo(() => hrmsProcessing(flow, 'hrms-fetch'), [flow]);
   const dedupeSteps = useMemo(() => hrmsProcessing(flow, 'mobile-dedupe'), [flow]);
@@ -177,13 +191,23 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
    * what the next phase runs, and its outcome is what decides the rest of the
    * journey, so the declaration belongs on this screen in all five flows.
    *
-   * The CKYC-download consent is deliberately *not* here. It is taken wherever
-   * the identifier it would be keyed on is actually known, immediately before
-   * the OTP that confirms it — on `/otp-verification` for the flows that pull
-   * CKYC by PAN, and on the Aadhaar details step for those that pull it by
-   * Aadhaar.
+   * A flow whose HRMS record already carried a PAN can authorise the CKYC
+   * download here as well, because the identifier that pull would be keyed on is
+   * already in hand. Those flows take both declarations on this screen and
+   * confirm them with the OTP that follows, so nothing is looked up until the
+   * customer has both consented and confirmed.
+   *
+   * The flows without a PAN take their CKYC declaration later, on whichever
+   * screen their identifier becomes known — asking here would be asking for
+   * consent that cannot apply.
    */
-  const canContinue = recordComplete && consentAccepted;
+  const takesCkycConsent = definition.hrmsPanPresent;
+
+  /** Two declarations go to a sheet on a heavy screen; one stays inline. */
+  const gatedBySheet = takesCkycConsent;
+
+  const allConsentsGiven = consentAccepted && (!takesCkycConsent || ckycConsentAccepted);
+  const canContinue = recordComplete && (gatedBySheet || allConsentsGiven);
 
   /**
    * Drives whichever phase is currently simulating backend work: one timer per
@@ -236,6 +260,12 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
     writeJourney(flow, { consentAccepted: next });
   };
 
+  const handleToggleCkycConsent = () => {
+    const next = !ckycConsentAccepted;
+    setCkycConsentAccepted(next);
+    writeJourney(flow, { ckycConsentAccepted: next });
+  };
+
   const handleRetry = () => {
     setStepIndex(0);
     setCompleted([]);
@@ -246,6 +276,21 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
     // Rendered `disabled` until the gate opens; guarded here too, so an
     // activation that slips through submits nothing (Requirements 4.5, 4.10).
     if (!canContinue) return;
+
+    // Sheet-gated flows: the CTA opens the declarations rather than advancing.
+    // `proceed` below is what advances, and only once both are ticked.
+    if (gatedBySheet && !allConsentsGiven) {
+      setShowGateSheet(true);
+      return;
+    }
+
+    proceed();
+  };
+
+  /** The actual advance, shared by the inline path and the sheet's accept action. */
+  const proceed = () => {
+    if (!recordComplete || !allConsentsGiven) return;
+    setShowGateSheet(false);
 
     const next = hrmsNextRoute(flow, 'hrms-details');
     if (!next) return;
@@ -430,46 +475,25 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
               {/* Shared explainer sections — same six sections LandingPage shows */}
               <SalaryAdvanceInfoSections />
 
-              {/* One declaration — permission to run the dedupe — so it sits
-                  inline above the CTA, in every flow. The button wraps only the
-                  box; the copy is a sibling paragraph naming it, with the full
-                  wording behind "Read more". */}
+              {/* Declarations. One flow-dependent difference: a flow taking a
+                  single declaration shows it inline above the CTA, while a flow
+                  taking two moves both into the gating sheet the CTA opens —
+                  two stacked checkboxes plus a button would crowd an already
+                  heavy screen, which is the case the pattern's heavy-screen row
+                  covers. */}
               <StickyFooter>
-                <div className="mb-3 flex items-start gap-3">
-                    {/* Padding lifts the 20px box to a 24px hit area. Checked state
-                        is signalled by the tick icon, not colour alone. */}
-                    <button
-                      type="button"
-                      role="checkbox"
-                      aria-checked={consentAccepted}
-                      aria-labelledby="hrms-consent-label"
-                      onClick={handleToggleConsent}
-                      className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
-                    >
-                      <span
-                        className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
-                          consentAccepted ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
-                        }`}
-                      >
-                        {consentAccepted && (
-                          <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />
-                        )}
-                      </span>
-                    </button>
-                    {/* "Read more" is a sibling of the checkbox, never a child:
-                        a button inside a button is invalid HTML and the inner
-                        control would be unreachable. */}
-                    <p className="text-[12px] text-[#6b7280] leading-relaxed">
-                      <span id="hrms-consent-label">{tr(language, 'hrmsConsentText')}</span>{' '}
-                      <button
-                        type="button"
-                        onClick={() => setShowConsentSheet(true)}
-                        className="text-[12px] font-semibold text-[#315C9D] underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
-                      >
-                        {tr(language, 'panAadhaarReadMore')}
-                      </button>
-                    </p>
-                </div>
+                {!gatedBySheet && (
+                  <div className="mb-3">
+                    <ConsentRow
+                      id="hrms-consent"
+                      checked={consentAccepted}
+                      onToggle={handleToggleConsent}
+                      text={tr(language, 'hrmsConsentText')}
+                      readMoreLabel={tr(language, 'panAadhaarReadMore')}
+                      onReadMore={() => setReadMoreFor('bank')}
+                    />
+                  </div>
+                )}
 
                 <button
                   type="button"
@@ -520,18 +544,127 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
         </div>
       </main>
 
-      {/* Read-only bank-record consent wording. No footer action, so closing it
-          is the only exit and the checkbox stays the single place consent is
-          given. */}
+      {/* Gating sheet — the two-declaration flows only. Unlike the read-only
+          sheet below, this one decides something: it holds both checkboxes and
+          the action that advances the journey. Closing it submits nothing and
+          leaves both selections as they were. */}
       <BottomSheet
-        open={showConsentSheet}
-        onClose={() => setShowConsentSheet(false)}
-        title={tr(language, 'hrmsConsentTitle')}
+        open={showGateSheet}
+        onClose={() => setShowGateSheet(false)}
+        title={tr(language, 'hrmsGateSheetTitle')}
+        footer={
+          <button
+            type="button"
+            onClick={proceed}
+            disabled={!allConsentsGiven}
+            className="w-full bg-[#315C9D] text-white h-12 rounded-lg text-base font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+          >
+            {tr(language, 'hrmsGateSheetAcceptBtn')}
+            <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
+          </button>
+        }
+      >
+        <p className="text-sm text-[#6b7280] leading-relaxed mb-5">
+          {tr(language, 'hrmsGateSheetIntro')}
+        </p>
+
+        <div className="space-y-4">
+          <ConsentRow
+            id="hrms-gate-consent-bank"
+            checked={consentAccepted}
+            onToggle={handleToggleConsent}
+            text={tr(language, 'hrmsConsentText')}
+            readMoreLabel={tr(language, 'panAadhaarReadMore')}
+            onReadMore={() => setReadMoreFor('bank')}
+          />
+          <ConsentRow
+            id="hrms-gate-consent-ckyc"
+            checked={ckycConsentAccepted}
+            onToggle={handleToggleCkycConsent}
+            text={tr(language, 'ckycPanConsentText')}
+            readMoreLabel={tr(language, 'panAadhaarReadMore')}
+            onReadMore={() => setReadMoreFor('ckyc')}
+          />
+        </div>
+      </BottomSheet>
+
+      {/* Read-only wording for whichever declaration's "Read more" was used. No
+          footer action, so closing it is the only exit and the checkboxes stay
+          the single place consent is given. */}
+      <BottomSheet
+        open={readMoreFor !== null}
+        onClose={() => setReadMoreFor(null)}
+        title={tr(
+          language,
+          readMoreFor === 'ckyc' ? 'ckycPanConsentTitle' : 'hrmsConsentTitle',
+        )}
       >
         <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
-          {tr(language, 'hrmsConsentFull')}
+          {tr(language, readMoreFor === 'ckyc' ? 'ckycPanConsentFull' : 'hrmsConsentFull')}
         </p>
       </BottomSheet>
+    </div>
+  );
+}
+
+/**
+ * One declaration: a checkbox, its copy, and a "Read more" link.
+ *
+ * Shared by the inline placement and the gating sheet so the two can never drift
+ * apart. The button wraps only the box — "Read more" is a sibling of it, never a
+ * child, because a button inside a button is invalid HTML and the inner control
+ * becomes unreachable. The copy names the checkbox via `aria-labelledby`, so a
+ * screen reader still announces the two together.
+ */
+function ConsentRow({
+  id,
+  checked,
+  onToggle,
+  text,
+  readMoreLabel,
+  onReadMore,
+}: {
+  id: string;
+  checked: boolean;
+  onToggle: () => void;
+  text: string;
+  readMoreLabel: string;
+  onReadMore: () => void;
+}) {
+  const labelId = `${id}-label`;
+  return (
+    <div className="flex items-start gap-3">
+      {/* Padding lifts the 20px box to a 24px hit area. Checked state is
+          signalled by the tick icon, not colour alone. */}
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={checked}
+        aria-labelledby={labelId}
+        onClick={onToggle}
+        className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+      >
+        <span
+          className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
+            checked ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
+          }`}
+        >
+          {checked && (
+            <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />
+          )}
+        </span>
+      </button>
+
+      <p className="text-[12px] text-[#6b7280] leading-relaxed">
+        <span id={labelId}>{text}</span>{' '}
+        <button
+          type="button"
+          onClick={onReadMore}
+          className="text-[12px] font-semibold text-[#315C9D] underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+        >
+          {readMoreLabel}
+        </button>
+      </p>
     </div>
   );
 }
