@@ -14,6 +14,7 @@ import {
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
 import { SalaryAdvanceInfoSections } from './SalaryAdvanceInfoSections';
+import { BottomSheet } from './BottomSheet';
 import { useLanguage } from '../hooks/useLanguage';
 import type { Language } from '../hooks/useLanguage';
 import {
@@ -40,16 +41,25 @@ import upiLogo from '@/assets/upi.svg';
  *
  *   fetching   simulated HRMS employee-record fetch, auto-advances
  *   review     greeting + read-only record + explainer sections, with the
- *              consent declaration inline above the CTA
- *   processing simulated CKYC identifier retrieval + PAN dedupe (flows 1–2 only)
+ *              bank-record consent declaration inline above the CTA
+ *   processing mobile-number dedupe against IOB records, plus whatever the
+ *              matched record implies (a PAN lookup and CKYC identifier
+ *              retrieval when one is held). Runs in all five flows.
+ *
+ * The mobile dedupe is why this screen carries a declaration at all, and why it
+ * carries the same one in every flow: the mobile number arrived with the HRMS
+ * record, so whether the customer banks with IOB — and what that record holds —
+ * is answered here without asking them for an account number. That answer is
+ * what routes the rest of the journey.
  *
  * `consent-declaration-pattern.md` puts a single declaration inline with the CTA
  * however heavy the screen, so the checkbox sits in the `StickyFooter` above the
- * button rather than in a sheet. It is shown only for the flows whose HRMS record
- * carried a PAN: CKYC cannot be fetched without a PAN or an Aadhaar number, and
- * the `hrms-nopan-*` flows have captured neither here, so asking them to
- * authorise a CKYC download would be asking for consent that cannot apply. Those
- * flows show no consent control and their CTA is gated on the record alone.
+ * button, with the formal wording behind "Read more".
+ *
+ * The CKYC-download consent is deliberately not taken here. It is taken where
+ * the identifier it is keyed on is known, immediately before the OTP confirming
+ * it: on `/otp-verification` for the flows pulling CKYC by PAN, and on the
+ * Aadhaar details step for those pulling it by Aadhaar.
  *
  * Which phase follows `review` is decided by the registry, never by this
  * component. `hrmsNextRoute` encodes an in-component phase transition as a
@@ -110,8 +120,12 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
     () => readJourney(flow).consentAccepted,
   );
 
+  // Read-only: the sheet shows the full wording and nothing else. It never sets
+  // consent and never advances the flow, so the CTA gating is untouched.
+  const [showConsentSheet, setShowConsentSheet] = useState(false);
+
   const fetchSteps = useMemo(() => hrmsProcessing(flow, 'hrms-fetch'), [flow]);
-  const dedupeSteps = useMemo(() => hrmsProcessing(flow, 'ckyc-pan-dedupe'), [flow]);
+  const dedupeSteps = useMemo(() => hrmsProcessing(flow, 'mobile-dedupe'), [flow]);
   const NO_STEPS = useMemo<ProcessingStep[]>(() => [], []);
   // Stable per phase, so toggling consent never restarts a progress timer.
   const runningSteps =
@@ -158,14 +172,18 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
   ];
 
   /**
-   * Whether this screen asks for consent at all. Only the PAN-present flows have
-   * an identifier a CKYC download could be authorised against; the `hrms-nopan-*`
-   * flows take their consent later, on the screen that collects the identifier.
+   * Every flow asks for the same one thing here: permission to check IOB's
+   * records against the mobile number the HRMS record supplied. That dedupe is
+   * what the next phase runs, and its outcome is what decides the rest of the
+   * journey, so the declaration belongs on this screen in all five flows.
+   *
+   * The CKYC-download consent is deliberately *not* here. It is taken wherever
+   * the identifier it would be keyed on is actually known, immediately before
+   * the OTP that confirms it — on `/otp-verification` for the flows that pull
+   * CKYC by PAN, and on the Aadhaar details step for those that pull it by
+   * Aadhaar.
    */
-  const consentRequired = definition.hrmsPanPresent;
-
-  /** Consent, when required, is the only thing gating the CTA beyond the record. */
-  const canContinue = recordComplete && (!consentRequired || consentAccepted);
+  const canContinue = recordComplete && consentAccepted;
 
   /**
    * Drives whichever phase is currently simulating backend work: one timer per
@@ -185,7 +203,19 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
           setPhase('review');
           return;
         }
-        const next = hrmsNextRoute(flow, 'ckyc-pan-dedupe');
+
+        // The dedupe has finished, so whatever the matched bank record holds is
+        // now known. A record carrying a PAN is recorded on the journey here —
+        // this is the only place that PAN enters the journey, and it is what
+        // later screens read instead of asking the customer for it.
+        if (typeof definition.bankRecordPan === 'string' && definition.bankRecordPan) {
+          writeJourney(flow, {
+            pan: definition.bankRecordPan,
+            panSource: 'bank-record',
+          });
+        }
+
+        const next = hrmsNextRoute(flow, 'mobile-dedupe');
         if (next && next !== ROUTE) navigate(next);
       }, PHASE_TAIL_MS);
       return () => clearTimeout(timer);
@@ -197,7 +227,7 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
       setStepIndex((prev) => prev + 1);
     }, current.durationMs);
     return () => clearTimeout(timer);
-  }, [phase, stepIndex, runningSteps, flow, navigate]);
+  }, [phase, stepIndex, runningSteps, flow, definition.bankRecordPan, navigate]);
 
   /** Persisted on every toggle, so returning to this screen restores the choice. */
   const handleToggleConsent = () => {
@@ -221,9 +251,9 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
     if (!next) return;
 
     if (next === ROUTE) {
-      // Registry encoding: same route means stay put and swap phase. Only the
-      // flows declaring a dedupe step have a phase to swap to.
-      if (hasStep(flow, 'ckyc-pan-dedupe')) {
+      // Registry encoding: same route means stay put and swap phase. Every flow
+      // declares the dedupe, so this is the path all five take from `review`.
+      if (hasStep(flow, 'mobile-dedupe')) {
         setStepIndex(0);
         setCompleted([]);
         setPhase('processing');
@@ -400,13 +430,12 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
               {/* Shared explainer sections — same six sections LandingPage shows */}
               <SalaryAdvanceInfoSections />
 
-              {/* One declaration, so it sits inline above the CTA. The button
-                  wraps only the box; the copy is a sibling paragraph naming it,
-                  and there is no long-text variant of this wording, so it needs
-                  no "Read more". Absent entirely on the no-PAN flows. */}
+              {/* One declaration — permission to run the dedupe — so it sits
+                  inline above the CTA, in every flow. The button wraps only the
+                  box; the copy is a sibling paragraph naming it, with the full
+                  wording behind "Read more". */}
               <StickyFooter>
-                {consentRequired && (
-                  <div className="mb-3 flex items-start gap-3">
+                <div className="mb-3 flex items-start gap-3">
                     {/* Padding lifts the 20px box to a 24px hit area. Checked state
                         is signalled by the tick icon, not colour alone. */}
                     <button
@@ -427,11 +456,20 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
                         )}
                       </span>
                     </button>
-                    <p id="hrms-consent-label" className="text-[12px] text-[#6b7280] leading-relaxed">
-                      {tr(language, 'hrmsConsentText')}
+                    {/* "Read more" is a sibling of the checkbox, never a child:
+                        a button inside a button is invalid HTML and the inner
+                        control would be unreachable. */}
+                    <p className="text-[12px] text-[#6b7280] leading-relaxed">
+                      <span id="hrms-consent-label">{tr(language, 'hrmsConsentText')}</span>{' '}
+                      <button
+                        type="button"
+                        onClick={() => setShowConsentSheet(true)}
+                        className="text-[12px] font-semibold text-[#315C9D] underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                      >
+                        {tr(language, 'panAadhaarReadMore')}
+                      </button>
                     </p>
-                  </div>
-                )}
+                </div>
 
                 <button
                   type="button"
@@ -481,6 +519,19 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
 
         </div>
       </main>
+
+      {/* Read-only bank-record consent wording. No footer action, so closing it
+          is the only exit and the checkbox stays the single place consent is
+          given. */}
+      <BottomSheet
+        open={showConsentSheet}
+        onClose={() => setShowConsentSheet(false)}
+        title={tr(language, 'hrmsConsentTitle')}
+      >
+        <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
+          {tr(language, 'hrmsConsentFull')}
+        </p>
+      </BottomSheet>
     </div>
   );
 }

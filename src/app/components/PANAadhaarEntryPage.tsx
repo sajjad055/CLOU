@@ -7,7 +7,13 @@ import { StickyFooter } from './StickyFooter';
 import { BottomSheet } from './BottomSheet';
 import { useLanguage } from '../hooks/useLanguage';
 import { tr } from '../flows/hrmsContent';
-import { getActiveFlow, hrmsNextRoute, isHrmsFlow, type HrmsFlowId } from '../flows/hrmsFlows';
+import {
+  getActiveFlow,
+  hasStep,
+  hrmsNextRoute,
+  isHrmsFlow,
+  type HrmsFlowId,
+} from '../flows/hrmsFlows';
 import { readJourney, writeJourney } from '../flows/hrmsJourney';
 import aadhaarImg from '@/assets/aadhaar.svg';
 
@@ -38,14 +44,18 @@ const PAN_LENGTH = 10;
 export function PANAadhaarEntryPage() {
   const navigate = useNavigate();
   const flow = getActiveFlow();
+  // Flows 1–3 reach their CKYC record with a PAN, so they declare no
+  // `pan-aadhaar-entry` step and have no destination out of this screen. Opening
+  // it directly under one of them would dead-end, so it redirects too.
+  const usable = isHrmsFlow(flow) && hasStep(flow, 'pan-aadhaar-entry');
 
   useEffect(() => {
-    if (!isHrmsFlow(flow)) navigate('/', { replace: true });
-  }, [flow, navigate]);
+    if (!usable) navigate('/', { replace: true });
+  }, [usable, navigate]);
 
-  if (!isHrmsFlow(flow)) return null;
+  if (!usable) return null;
 
-  return <PANAadhaarEntry flow={flow} />;
+  return <PANAadhaarEntry flow={flow as HrmsFlowId} />;
 }
 
 function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {

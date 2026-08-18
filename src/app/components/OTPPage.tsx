@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Shield, ArrowRight, Pencil, Loader2, AlertCircle } from 'lucide-react';
+import { Shield, ArrowRight, Pencil, Loader2, AlertCircle, Check } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
+import { BottomSheet } from './BottomSheet';
 import { useLanguage } from '../hooks/useLanguage';
 import { getActiveFlow, hrmsNextRoute } from '../flows/hrmsFlows';
 import { tr } from '../flows/hrmsContent';
@@ -24,6 +25,21 @@ export function OTPPage() {
    * take the HRMS branch below.
    */
   const hrmsNext = hrmsNextRoute(getActiveFlow(), 'ckyc-otp');
+
+  /**
+   * CKYC-download consent, HRMS flows only.
+   *
+   * These flows reach this screen with a PAN already in hand — from HRMS, or
+   * from the bank record the mobile dedupe matched — and this OTP is what
+   * confirms the download. So the declaration belongs here, immediately above
+   * it: consent, then the OTP that confirms the consent.
+   *
+   * Both the declaration and the sheet are gated on `hrmsNext`, so nothing about
+   * this screen changes for the eight legacy flows.
+   */
+  const [ckycConsent, setCkycConsent] = useState(false);
+  // Read-only: shows the full wording, sets no consent, advances nothing.
+  const [showConsentSheet, setShowConsentSheet] = useState(false);
 
   useEffect(() => { inputRefs.current[0]?.focus(); }, []);
 
@@ -82,6 +98,9 @@ export function OTPPage() {
     // HRMS branch, checked first. Accepts any six-digit value.
     if (hrmsNext) {
       if (verifying) return;
+      // The CTA is rendered disabled without consent; guarded here too, so an
+      // activation that slips through downloads nothing.
+      if (!ckycConsent) return;
       if (otp.join('').replace(/\D/g, '').length !== 6) {
         setOtpError(true);
         return;
@@ -122,16 +141,34 @@ export function OTPPage() {
 
           {/* Title */}
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="text-center mb-8">
-            <h1 className="text-xl font-semibold text-[#111827] mb-1">{t.title}</h1>
-            <p className="text-sm text-[#6b7280]">
-              {t.subtitle}{' '}
-              <span className="inline-flex items-center gap-1 align-middle">
-                <span className="font-semibold text-[#111827]">{t.phoneNumber}</span>
-                <button type="button" onClick={() => navigate(-1)} aria-label="Edit number" className="text-[#315C9D] hover:opacity-80 transition-opacity">
-                  <Pencil className="w-5 h-5" strokeWidth={2} />
-                </button>
-              </span>
-            </p>
+            {/* On the HRMS flows this OTP is what authorises the CKYC download,
+                so it is named for that. The legacy flows keep their own wording,
+                including the edit-number affordance that belongs to a number the
+                customer typed — the HRMS number came from the employee record,
+                so there is nothing to edit here. */}
+            {hrmsNext ? (
+              <>
+                <h1 className="text-xl font-semibold text-[#111827] mb-1">
+                  {tr(selectedLanguage, 'ckycOtpTitle')}
+                </h1>
+                <p className="text-sm text-[#6b7280]">
+                  {tr(selectedLanguage, 'ckycOtpSubtitle').replace('{mobile}', t.phoneNumber)}
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-xl font-semibold text-[#111827] mb-1">{t.title}</h1>
+                <p className="text-sm text-[#6b7280]">
+                  {t.subtitle}{' '}
+                  <span className="inline-flex items-center gap-1 align-middle">
+                    <span className="font-semibold text-[#111827]">{t.phoneNumber}</span>
+                    <button type="button" onClick={() => navigate(-1)} aria-label="Edit number" className="text-[#315C9D] hover:opacity-80 transition-opacity">
+                      <Pencil className="w-5 h-5" strokeWidth={2} />
+                    </button>
+                  </span>
+                </p>
+              </>
+            )}
           </motion.div>
 
           {/* OTP Inputs */}
@@ -194,9 +231,49 @@ export function OTPPage() {
       </main>
 
       <StickyFooter>
+        {/* One declaration, so it stays inline above the CTA per the consent
+            pattern. The "Read more" link is a sibling of the checkbox, never a
+            child: a button inside a button is invalid HTML and the inner control
+            would be unreachable. */}
+        {hrmsNext && (
+          <div className="mb-3 flex items-start gap-3">
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={ckycConsent}
+              aria-labelledby="ckyc-pan-consent-label"
+              onClick={() => setCkycConsent(!ckycConsent)}
+              className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+            >
+              <span
+                className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
+                  ckycConsent ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
+                }`}
+              >
+                {ckycConsent && (
+                  <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />
+                )}
+              </span>
+            </button>
+
+            <p className="text-[12px] text-[#6b7280] leading-relaxed">
+              <span id="ckyc-pan-consent-label">
+                {tr(selectedLanguage, 'ckycPanConsentText')}
+              </span>{' '}
+              <button
+                type="button"
+                onClick={() => setShowConsentSheet(true)}
+                className="text-[12px] font-semibold text-[#315C9D] underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+              >
+                {tr(selectedLanguage, 'panAadhaarReadMore')}
+              </button>
+            </p>
+          </div>
+        )}
+
         <button
           onClick={handleVerify}
-          disabled={hrmsNext ? verifying : !isOtpComplete || verifying}
+          disabled={hrmsNext ? verifying || !ckycConsent : !isOtpComplete || verifying}
           className="w-full bg-[#315C9D] text-white h-12 rounded-lg text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
         >
           {verifying ? (
@@ -212,6 +289,18 @@ export function OTPPage() {
           )}
         </button>
       </StickyFooter>
+
+      {/* Read-only consent wording. No footer action, so closing it is the only
+          exit and the checkbox stays the single place consent is given. */}
+      <BottomSheet
+        open={showConsentSheet}
+        onClose={() => setShowConsentSheet(false)}
+        title={tr(selectedLanguage, 'ckycPanConsentTitle')}
+      >
+        <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
+          {tr(selectedLanguage, 'ckycPanConsentFull')}
+        </p>
+      </BottomSheet>
     </div>
   );
 }

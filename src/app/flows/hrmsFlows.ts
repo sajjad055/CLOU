@@ -37,10 +37,7 @@ export type ExistingFlowId = (typeof EXISTING_FLOW_IDS)[number];
 export type HrmsStepId =
   | 'hrms-fetch' // phase of /hrms-details
   | 'hrms-details' // review + consent phase of /hrms-details
-  | 'ckyc-pan-dedupe' // processing phase of /hrms-details (flows 1, 2)
-  | 'account-choice' // /hrms-account-choice
-  | 'account-entry' // entry phase of /hrms-account-entry
-  | 'account-pan-lookup' // processing phase of /hrms-account-entry (flows 3, 5)
+  | 'mobile-dedupe' // processing phase of /hrms-details (all five flows)
   | 'pan-aadhaar-entry' // /hrms-pan-aadhaar
   | 'aadhaar' // /aadhaar-verification (one or more segments)
   | 'ckyc-otp' // /otp-verification
@@ -62,16 +59,11 @@ export interface HrmsStep {
   /** Route that renders this step. */
   route: string;
   /** In-component phase name, when this step is a phase of `route` rather than its own route. */
-  phase?: 'fetching' | 'review' | 'processing' | 'entry';
+  phase?: 'fetching' | 'review' | 'processing';
   /** Simulated backend steps this phase renders, in order. */
   processing?: ProcessingStep[];
   /** Route to navigate to when this step completes. `null` marks the terminal step. */
   next: string | null;
-  /**
-   * Alternate destination for a branching step. Used by `account-choice`, where
-   * `next` is the "I have an IOB account" route and `altNext` the "I don't" route.
-   */
-  altNext?: string;
 }
 
 /** Internal step names of AadhaarVerificationPage, reused verbatim. */
@@ -107,7 +99,7 @@ export interface CkycDetailsConfig {
   /** Dedupe banner rendered on CKYCCustomerDetailsPage. HRMS flows only. */
   dedupeResult: 'etb' | 'ntb';
   /** Where the displayed PAN comes from. `'none'` renders a blank PAN with an explanatory label. */
-  panSource: 'hrms' | 'account-record' | 'journey' | 'none';
+  panSource: 'hrms' | 'bank-record' | 'journey' | 'none';
   next: string;
   /**
    * Post-review processing. The dedupe already ran earlier in every HRMS flow,
@@ -126,9 +118,18 @@ export interface HrmsFlowDefinition {
   descriptionEn: string;
   entryRoute: '/hrms-details';
   hrmsPanPresent: boolean;
+  /** Outcome of the mobile-number dedupe against IOB records. */
   dedupe: 'etb' | 'ntb';
-  /** PAN held by the IOB account record. `null` = none (flow 5). `undefined` = flow never looks. */
-  accountRecordPan?: string | null;
+  /**
+   * PAN carried by the bank record the mobile dedupe matched.
+   *
+   *   • a string  — the matched record holds this PAN (flow 3)
+   *   • `null`    — the record was matched but holds no PAN (flow 5)
+   *   • `undefined` — the flow never consults a bank record for a PAN, either
+   *     because HRMS already supplied one (flows 1, 2) or because the dedupe
+   *     found no record at all (flow 4)
+   */
+  bankRecordPan?: string | null;
   steps: HrmsStep[];
   aadhaarSegments: AadhaarSegment[];
   ckycDetails: CkycDetailsConfig;
@@ -150,8 +151,11 @@ export const HRMS_EMPLOYEE = {
   address: 'No. 14, Anna Salai, Guindy, Chennai, Tamil Nadu 600032',
 } as const;
 
-/** PAN held by the IOB account record. Flow 3 only; flow 5's record has none. */
-export const ACCOUNT_RECORD_PAN = 'ABCPK1234F';
+/**
+ * PAN held by the bank record the mobile dedupe matches. Flow 3 only; flow 5
+ * matches a record that holds none.
+ */
+export const BANK_RECORD_PAN = 'ABCPK1234F';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Simulated processing-step catalogue
@@ -170,7 +174,22 @@ export const hrmsFetch: ProcessingStep = {
   durationMs: 2500,
 };
 
-/** CKYC identifier retrieval, first half of the flow 1–2 dedupe phase. */
+/**
+ * Mobile-number dedupe against IOB records — the first step of the `processing`
+ * phase in all five flows, and what the landing screen's declaration authorises.
+ *
+ * This is the step that replaced the IOB account-number question: the mobile
+ * number already arrived with the HRMS record, so whether the customer banks
+ * with IOB (and what that record holds) is answered without asking them.
+ */
+export const mobileDedupe: ProcessingStep = {
+  id: 'mobile-dedupe',
+  labelEn: 'Checking your mobile number against bank records…',
+  labelTa: 'உங்கள் மொபைல் எண் வங்கிப் பதிவுகளுடன் சரிபார்க்கப்படுகிறது…',
+  durationMs: 2200,
+};
+
+/** CKYC identifier retrieval, keyed by an already-known PAN (flows 1–3). */
 export const ckycId: ProcessingStep = {
   id: 'ckyc-id',
   labelEn: 'Retrieving your CKYC identifier…',
@@ -178,35 +197,19 @@ export const ckycId: ProcessingStep = {
   durationMs: 1800,
 };
 
-/** PAN dedupe against bank records, second half of the flow 1–2 dedupe phase. */
-export const panDedupe: ProcessingStep = {
-  id: 'pan-dedupe',
-  labelEn: 'Checking your PAN against bank records…',
-  labelTa: 'உங்கள் PAN வங்கிப் பதிவுகளுடன் சரிபார்க்கப்படுகிறது…',
-  durationMs: 2000,
-};
-
-/** PAN found on the IOB account record (flow 3). */
-export const accountPan: ProcessingStep = {
-  id: 'account-pan',
-  labelEn: 'Retrieving the PAN from your account record…',
-  labelTa: 'உங்கள் கணக்குப் பதிவிலிருந்து PAN பெறப்படுகிறது…',
+/** PAN found on the matched bank record (flow 3). */
+export const bankRecordPanFound: ProcessingStep = {
+  id: 'bank-record-pan',
+  labelEn: 'Retrieving the PAN from your bank record…',
+  labelTa: 'உங்கள் வங்கிப் பதிவிலிருந்து PAN பெறப்படுகிறது…',
   durationMs: 1800,
 };
 
-/** CKYC record verification following an account-record PAN lookup (flow 3). */
-export const ckycVerify: ProcessingStep = {
-  id: 'ckyc-verify',
-  labelEn: 'Verifying your CKYC record…',
-  labelTa: 'உங்கள் CKYC பதிவு சரிபார்க்கப்படுகிறது…',
-  durationMs: 2000,
-};
-
-/** No PAN on the account record (flow 5). */
-export const accountPanAbsent: ProcessingStep = {
-  id: 'account-pan-absent',
-  labelEn: 'Checking your account record for a PAN…',
-  labelTa: 'உங்கள் கணக்குப் பதிவில் PAN உள்ளதா எனச் சரிபார்க்கப்படுகிறது…',
+/** No PAN on the matched bank record (flow 5). */
+export const bankRecordPanAbsent: ProcessingStep = {
+  id: 'bank-record-pan-absent',
+  labelEn: 'Checking your bank record for a PAN…',
+  labelTa: 'உங்கள் வங்கிப் பதிவில் PAN உள்ளதா எனச் சரிபார்க்கப்படுகிறது…',
   durationMs: 1800,
 };
 
@@ -248,11 +251,10 @@ export const cifCreate: ProcessingStep = {
 /** The full catalogue, keyed by step id, for lookup and iteration. */
 export const HRMS_PROCESSING_STEPS: Record<string, ProcessingStep> = {
   [hrmsFetch.id]: hrmsFetch,
+  [mobileDedupe.id]: mobileDedupe,
   [ckycId.id]: ckycId,
-  [panDedupe.id]: panDedupe,
-  [accountPan.id]: accountPan,
-  [ckycVerify.id]: ckycVerify,
-  [accountPanAbsent.id]: accountPanAbsent,
+  [bankRecordPanFound.id]: bankRecordPanFound,
+  [bankRecordPanAbsent.id]: bankRecordPanAbsent,
   [ckycByAadhaar.id]: ckycByAadhaar,
   [breCheck.id]: breCheck,
   [offersFetch.id]: offersFetch,
@@ -276,12 +278,12 @@ export const HRMS_PROCESSING_STEPS: Record<string, ProcessingStep> = {
 // `aadhaarSegments[i].exitRoute`; the step row records the same route so the
 // table stays readable next to the design document.
 
-/** Flow 1 — HRMS returned a PAN, PAN dedupe finds an existing bank customer. */
+/** Flow 1 — HRMS returned a PAN, the mobile dedupe finds an existing bank customer. */
 const hrmsPanEtb: HrmsFlowDefinition = {
   id: 'hrms-pan-etb',
   labelEn: '▶ HRMS PAN Present, ETB',
   descriptionEn:
-    'HRMS fetch → HRMS details → CKYC ID + PAN dedupe → OTP → CKYC details (ETB) → Offers',
+    'HRMS fetch → HRMS details → Mobile dedupe + CKYC ID → CKYC consent + OTP → CKYC details (ETB) → Offers',
   entryRoute: '/hrms-details',
   hrmsPanPresent: true,
   dedupe: 'etb',
@@ -295,10 +297,10 @@ const hrmsPanEtb: HrmsFlowDefinition = {
     },
     { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/hrms-details' },
     {
-      id: 'ckyc-pan-dedupe',
+      id: 'mobile-dedupe',
       route: '/hrms-details',
       phase: 'processing',
-      processing: [ckycId, panDedupe],
+      processing: [mobileDedupe, ckycId],
       next: '/otp-verification',
     },
     { id: 'ckyc-otp', route: '/otp-verification', next: '/ckyc-customer-details' },
@@ -316,12 +318,12 @@ const hrmsPanEtb: HrmsFlowDefinition = {
   },
 };
 
-/** Flow 2 — HRMS returned a PAN, dedupe finds no record, full Aadhaar + Face RD + CIF. */
+/** Flow 2 — HRMS returned a PAN, the mobile dedupe finds no record, full Aadhaar + Face RD + CIF. */
 const hrmsPanNtb: HrmsFlowDefinition = {
   id: 'hrms-pan-ntb',
   labelEn: '▶ HRMS PAN Present, NTB',
   descriptionEn:
-    'HRMS fetch → HRMS details → CKYC ID + PAN dedupe → OTP → CKYC details (NTB) → Aadhaar + Face → CIF → Offers',
+    'HRMS fetch → HRMS details → Mobile dedupe + CKYC ID → CKYC consent + OTP → CKYC details (NTB) → Aadhaar + Face → CIF → Offers',
   entryRoute: '/hrms-details',
   hrmsPanPresent: true,
   dedupe: 'ntb',
@@ -335,10 +337,10 @@ const hrmsPanNtb: HrmsFlowDefinition = {
     },
     { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/hrms-details' },
     {
-      id: 'ckyc-pan-dedupe',
+      id: 'mobile-dedupe',
       route: '/hrms-details',
       phase: 'processing',
-      processing: [ckycId, panDedupe],
+      processing: [mobileDedupe, ckycId],
       next: '/otp-verification',
     },
     { id: 'ckyc-otp', route: '/otp-verification', next: '/ckyc-customer-details' },
@@ -382,16 +384,21 @@ const hrmsPanNtb: HrmsFlowDefinition = {
   },
 };
 
-/** Flow 3 — no HRMS PAN, the IOB account record holds one, dedupe finds an existing customer. */
+/**
+ * Flow 3 — no HRMS PAN, but the mobile dedupe matches a bank record that holds
+ * one. The PAN lookup and CKYC identifier retrieval run in the same processing
+ * phase as the dedupe, so nothing is asked of the customer between the landing
+ * screen and the confirming OTP.
+ */
 const hrmsNopanEtb: HrmsFlowDefinition = {
   id: 'hrms-nopan-etb',
-  labelEn: '▶ HRMS No PAN, ETB (account has PAN)',
+  labelEn: '▶ HRMS No PAN, ETB (bank record has PAN)',
   descriptionEn:
-    'HRMS fetch → HRMS details → Account choice → Account number → PAN found + CKYC → OTP → CKYC details → Offers',
+    'HRMS fetch → HRMS details → Mobile dedupe + PAN from bank record + CKYC ID → CKYC consent + OTP → CKYC details (ETB) → Offers',
   entryRoute: '/hrms-details',
   hrmsPanPresent: false,
   dedupe: 'etb',
-  accountRecordPan: ACCOUNT_RECORD_PAN,
+  bankRecordPan: BANK_RECORD_PAN,
   steps: [
     {
       id: 'hrms-fetch',
@@ -400,25 +407,13 @@ const hrmsNopanEtb: HrmsFlowDefinition = {
       processing: [hrmsFetch],
       next: '/hrms-details',
     },
-    // `review` renders a blank PAN row for this flow.
-    { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/hrms-account-choice' },
+    // `review` renders the "not available" PAN label for this flow.
+    { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/hrms-details' },
     {
-      id: 'account-choice',
-      route: '/hrms-account-choice',
-      next: '/hrms-account-entry', // "I have an IOB account"
-      altNext: '/hrms-pan-aadhaar', // "I don't have an IOB account"
-    },
-    {
-      id: 'account-entry',
-      route: '/hrms-account-entry',
-      phase: 'entry',
-      next: '/hrms-account-entry',
-    },
-    {
-      id: 'account-pan-lookup',
-      route: '/hrms-account-entry',
+      id: 'mobile-dedupe',
+      route: '/hrms-details',
       phase: 'processing',
-      processing: [accountPan, ckycVerify],
+      processing: [mobileDedupe, bankRecordPanFound, ckycId],
       next: '/otp-verification',
     },
     { id: 'ckyc-otp', route: '/otp-verification', next: '/ckyc-customer-details' },
@@ -428,7 +423,7 @@ const hrmsNopanEtb: HrmsFlowDefinition = {
   aadhaarSegments: [],
   ckycDetails: {
     dedupeResult: 'etb',
-    panSource: 'account-record',
+    panSource: 'bank-record',
     next: '/sanctioned-offers',
     // Straight to offers from here, so the eligibility check and offers fetch
     // run on this screen rather than the offers appearing instantly.
@@ -437,15 +432,16 @@ const hrmsNopanEtb: HrmsFlowDefinition = {
 };
 
 /**
- * Flow 4 — no HRMS PAN, no IOB account. The Aadhaar screen runs twice as two
- * disjoint segments, so no second Aadhaar OTP is ever shown. No
- * `account-entry` step appears anywhere in this flow.
+ * Flow 4 — no HRMS PAN, and the mobile dedupe finds no bank record at all. With
+ * no PAN available from either source the journey falls back to Aadhaar, and
+ * being new to the bank it also needs Face RD and a CIF. So the Aadhaar screen
+ * runs twice as two disjoint segments, and no second Aadhaar OTP is ever shown.
  */
 const hrmsNopanNtb: HrmsFlowDefinition = {
   id: 'hrms-nopan-ntb',
-  labelEn: '▶ HRMS No PAN, NTB (no IOB account)',
+  labelEn: '▶ HRMS No PAN, NTB (no bank record)',
   descriptionEn:
-    'HRMS fetch → HRMS details → Account choice → PAN + Aadhaar → Aadhaar OTP → Aadhaar details + CKYC consent → CKYC OTP → CKYC by Aadhaar → CKYC details → Face → CIF → Offers',
+    'HRMS fetch → HRMS details → Mobile dedupe (no match) → PAN + Aadhaar → Aadhaar OTP → Aadhaar details + CKYC consent → CKYC OTP → CKYC by Aadhaar → CKYC details → Face → CIF → Offers',
   entryRoute: '/hrms-details',
   hrmsPanPresent: false,
   dedupe: 'ntb',
@@ -457,15 +453,16 @@ const hrmsNopanNtb: HrmsFlowDefinition = {
       processing: [hrmsFetch],
       next: '/hrms-details',
     },
-    // `review` renders a blank PAN row for this flow.
-    { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/hrms-account-choice' },
-    // This flow presents no IOB_Account_Entry_Screen, so both answers lead to
-    // the PAN + Aadhaar entry screen.
+    // `review` renders the "not available" PAN label for this flow.
+    { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/hrms-details' },
+    // The dedupe finds nothing, so there is no PAN to pull a CKYC record with
+    // and the journey continues on Aadhaar.
     {
-      id: 'account-choice',
-      route: '/hrms-account-choice',
+      id: 'mobile-dedupe',
+      route: '/hrms-details',
+      phase: 'processing',
+      processing: [mobileDedupe],
       next: '/hrms-pan-aadhaar',
-      altNext: '/hrms-pan-aadhaar', // "I don't have an IOB account"
     },
     { id: 'pan-aadhaar-entry', route: '/hrms-pan-aadhaar', next: '/aadhaar-verification' },
     // Segment 0 — Aadhaar OTP, Aadhaar details, CKYC consent + OTP, then CKYC
@@ -476,9 +473,10 @@ const hrmsNopanNtb: HrmsFlowDefinition = {
       processing: [ckycByAadhaar],
       next: '/ckyc-customer-details',
     },
-    // Retained so `/otp-verification` stays resolvable if opened directly; the
-    // segment no longer routes through it.
-    { id: 'ckyc-otp', route: '/otp-verification', next: '/ckyc-customer-details' },
+    // No `ckyc-otp` step: this flow pulls its CKYC record by Aadhaar and takes
+    // both the declaration and the confirming OTP inside the Aadhaar segment, so
+    // it never visits the shared OTP screen. Declaring the step would make that
+    // screen offer a PAN-keyed CKYC consent this flow cannot act on.
     { id: 'ckyc-details', route: '/ckyc-customer-details', next: '/aadhaar-verification' },
     // Segment 1 — Face RD then CIF creation.
     {
@@ -528,18 +526,19 @@ const hrmsNopanNtb: HrmsFlowDefinition = {
 };
 
 /**
- * Flow 5 — no HRMS PAN and the IOB account record holds none either, so the
- * journey falls back to Aadhaar. No Face RD and no CIF creation.
+ * Flow 5 — no HRMS PAN, and although the mobile dedupe matches a bank record
+ * that record holds no PAN either, so the journey falls back to Aadhaar. Being
+ * an existing customer it needs no Face RD and no CIF creation.
  */
 const hrmsNopanEtbNopan: HrmsFlowDefinition = {
   id: 'hrms-nopan-etb-nopan',
-  labelEn: '▶ HRMS No PAN, ETB, account holds no PAN',
+  labelEn: '▶ HRMS No PAN, ETB, bank record holds no PAN',
   descriptionEn:
-    'HRMS fetch → HRMS details → Account choice → Account number → No PAN found → Aadhaar + OTP → Aadhaar details + CKYC consent → CKYC OTP → CKYC by Aadhaar → CKYC details → Offers',
+    'HRMS fetch → HRMS details → Mobile dedupe (no PAN on record) → PAN + Aadhaar → Aadhaar OTP → Aadhaar details + CKYC consent → CKYC OTP → CKYC by Aadhaar → CKYC details (ETB) → Offers',
   entryRoute: '/hrms-details',
   hrmsPanPresent: false,
   dedupe: 'etb',
-  accountRecordPan: null,
+  bankRecordPan: null,
   steps: [
     {
       id: 'hrms-fetch',
@@ -548,49 +547,40 @@ const hrmsNopanEtbNopan: HrmsFlowDefinition = {
       processing: [hrmsFetch],
       next: '/hrms-details',
     },
-    // `review` renders a blank PAN row for this flow.
-    { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/hrms-account-choice' },
+    // `review` renders the "not available" PAN label for this flow.
+    { id: 'hrms-details', route: '/hrms-details', phase: 'review', next: '/hrms-details' },
+    // The record is matched but carries no PAN, so there is still nothing to
+    // pull a CKYC record with and the journey continues on Aadhaar.
     {
-      id: 'account-choice',
-      route: '/hrms-account-choice',
-      next: '/hrms-account-entry', // "I have an IOB account"
-      altNext: '/hrms-pan-aadhaar', // "I don't have an IOB account"
-    },
-    {
-      id: 'account-entry',
-      route: '/hrms-account-entry',
-      phase: 'entry',
-      next: '/hrms-account-entry',
-    },
-    {
-      id: 'account-pan-lookup',
-      route: '/hrms-account-entry',
+      id: 'mobile-dedupe',
+      route: '/hrms-details',
       phase: 'processing',
-      processing: [accountPanAbsent],
-      next: '/aadhaar-verification',
+      processing: [mobileDedupe, bankRecordPanAbsent],
+      next: '/hrms-pan-aadhaar',
     },
-    // Segment 0 — Aadhaar entry, Aadhaar OTP, Aadhaar details, CKYC consent +
-    // OTP, then CKYC retrieval by Aadhaar.
+    { id: 'pan-aadhaar-entry', route: '/hrms-pan-aadhaar', next: '/aadhaar-verification' },
+    // Segment 0 — Aadhaar OTP, Aadhaar details, CKYC consent + OTP, then CKYC
+    // retrieval by Aadhaar. Identical to flow 4's first segment now that the
+    // Aadhaar number is captured on `/hrms-pan-aadhaar` rather than in-segment.
     {
       id: 'aadhaar',
       route: '/aadhaar-verification',
       processing: [ckycByAadhaar],
       next: '/ckyc-customer-details',
     },
-    // Retained so `/otp-verification` stays resolvable if opened directly; the
-    // segment no longer routes through it.
-    { id: 'ckyc-otp', route: '/otp-verification', next: '/ckyc-customer-details' },
+    // No `ckyc-otp` step, for the same reason as flow 4: the CKYC record is
+    // pulled by Aadhaar and consented to inside the Aadhaar segment.
     { id: 'ckyc-details', route: '/ckyc-customer-details', next: '/sanctioned-offers' },
     { id: 'offers', route: '/sanctioned-offers', next: null },
   ],
   aadhaarSegments: [
     {
-      id: 'entry-otp-ckyc',
-      // Same order as flow 4's first segment, with the Aadhaar entry in front:
-      // verify by OTP, show the details, take CKYC-download consent there and
-      // confirm it by OTP, and only then pull the record.
-      steps: ['aadhaar-input', 'aadhaar-otp', 'confirm-details', 'ckyc-consent-otp', 'ckyc-retrieval'],
-      seedAadhaarFromJourney: false,
+      id: 'otp-then-ckyc',
+      // Verify the Aadhaar by OTP, show the details, take CKYC-download consent
+      // there and confirm it by OTP, and only then pull the record. The Aadhaar
+      // number itself arrives from `/hrms-pan-aadhaar`.
+      steps: ['aadhaar-otp', 'confirm-details', 'ckyc-consent-otp', 'ckyc-retrieval'],
+      seedAadhaarFromJourney: true,
       processing: [ckycByAadhaar],
       // The confirming OTP now happens inside the segment, so the separate hop
       // to the shared OTP screen is no longer needed.
@@ -737,8 +727,9 @@ export function getCkycDetailsConfig(flow: string): CkycDetailsConfig | null {
 /**
  * Whether `flow` declares `step` at all. `false` for every non-HRMS flow.
  *
- * Useful both for negative assertions ("flow 4 presents no `account-entry`")
- * and for disambiguating a `null` from `hrmsNextRoute`: a `null` with
+ * Useful both for negative assertions ("flows 1–3 present no
+ * `pan-aadhaar-entry`") and for disambiguating a `null` from `hrmsNextRoute`: a
+ * `null` with
  * `hasStep === true` is the terminal `offers` step; a `null` with
  * `hasStep === false` means the flow does not own this step.
  */

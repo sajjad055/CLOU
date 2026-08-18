@@ -1,10 +1,14 @@
 /**
  * Bilingual copy for the five HRMS salary-advance journeys.
  *
- * Every visible string of the four new screens (HRMSDetailsPage, AccountChoicePage,
- * IOBAccountEntryPage, PANAadhaarEntryPage) lives here, together with the HRMS
- * progress-step labels and the CKYC dedupe banner text rendered on the shared
- * screens, so the screens draw all copy from one source (Requirement 15.1, 15.4).
+ * Every visible string of the HRMS-specific screens (HRMSDetailsPage,
+ * PANAadhaarEntryPage) lives here, together with the HRMS-only copy rendered on
+ * the shared screens — the CKYC declarations, the confirming-OTP headings and
+ * the PAN row labels — so the screens draw all copy from one source
+ * (Requirement 15.1, 15.4).
+ *
+ * Progress-step labels are *not* here: they live on each `ProcessingStep` in the
+ * flow registry, in both languages, so a step and its label cannot drift apart.
  *
  * `HrmsStrings` is declared once, so the `satisfies Record<Language, HrmsStrings>`
  * guard on `hrmsContent` turns a missing Tamil key into a compile error, and
@@ -43,12 +47,15 @@ export interface HrmsStrings {
 
   // ── HRMS details screen — consent and controls ──
   /**
-   * Consent wording, shown only on the flows whose HRMS record carried a PAN.
-   * The `hrms-nopan-*` flows have captured neither a PAN nor an Aadhaar number at
-   * this point, so there is nothing a CKYC download could be authorised against
-   * and they show no consent here.
+   * Bank-record check declaration, shown inline above the CTA in all five flows.
+   * It authorises the mobile-number dedupe the next phase runs — the check that
+   * replaced asking the customer for an IOB account number. One line; the formal
+   * wording sits behind `panAadhaarReadMore`.
    */
   hrmsConsentText: string;
+  hrmsConsentTitle: string;
+  /** Full bank-record wording, paragraph-separated by `\n\n`. */
+  hrmsConsentFull: string;
   hrmsContinueBtn: string;
 
   // ── HRMS details screen — record error ──
@@ -61,47 +68,6 @@ export interface HrmsStrings {
   hrmsBankName: string;
   hrmsBadgeInstant: string;
   hrmsBadgeSecure: string;
-
-  // ── Account choice screen ──
-  accountChoiceTitle: string;
-  accountChoiceSubtitle: string;
-  accountChoiceHasAccount: string;
-  accountChoiceNoAccount: string;
-  /**
-   * Context line shown above the PAN and Aadhaar fields once "I don't have an
-   * IOB account" is selected, naming what the verification will run on.
-   */
-  accountChoiceNoAccountContext: string;
-  accountChoiceSelectedMarker: string;
-  accountChoiceContinueBtn: string;
-
-  /**
-   * The two declarations shown stacked inline above the CTA while "I have an IOB
-   * account" is selected. They are deliberately separate: reading the bank
-   * record and pulling a CKYC record from the central registry are different
-   * authorisations, so each is given and worded on its own. Both are short
-   * enough for one line; the formal wording sits behind each "Read more".
-   */
-  accountChoiceBankConsentText: string;
-  accountChoiceBankConsentTitle: string;
-  /** Full bank-record wording, paragraph-separated by `\n\n`. */
-  accountChoiceBankConsentFull: string;
-
-  accountChoiceCkycConsentText: string;
-  accountChoiceCkycConsentTitle: string;
-  /** Full CKYC-registry wording, paragraph-separated by `\n\n`. */
-  accountChoiceCkycConsentFull: string;
-
-  // ── IOB account entry screen ──
-  accountEntryTitle: string;
-  accountEntrySubtitle: string;
-  accountEntryLabel: string;
-  accountEntryPlaceholder: string;
-  accountEntryHelperText: string;
-  accountEntryShortError: string;
-  accountEntryPanFound: string;
-  accountEntryPanAbsent: string;
-  accountEntryContinueBtn: string;
 
   // ── PAN + Aadhaar entry screen ──
   panAadhaarTitle: string;
@@ -138,15 +104,16 @@ export interface HrmsStrings {
   /** CTA on `confirm-details` when the next step is the CKYC-download OTP. */
   ckycConfirmBtn: string;
 
-  // ── HRMS progress-step labels (Simulated_Backend) ──
-  stepHrmsFetch: string;
-  stepCkycId: string;
-  stepPanDedupe: string;
-  stepAccountPan: string;
-  stepCkycVerify: string;
-  stepAccountPanAbsent: string;
-  stepCkycByAadhaar: string;
-  stepCifCreate: string;
+  // ── CKYC download consent, PAN-keyed (the shared OTP screen) ──
+  /**
+   * Inline declaration shown on `/otp-verification` for the HRMS flows that pull
+   * their CKYC record with a PAN already in hand, immediately above the OTP that
+   * confirms it. Never shown for the eight legacy flows.
+   */
+  ckycPanConsentText: string;
+  ckycPanConsentTitle: string;
+  /** Full PAN-keyed CKYC wording, paragraph-separated by `\n\n`. */
+  ckycPanConsentFull: string;
 
   // ── Shared screens — CKYC dedupe banner and PAN row ──
   dedupeEtbBanner: string;
@@ -179,7 +146,10 @@ const English: HrmsStrings = {
 
   // ── HRMS details screen — consent and controls ──
   hrmsConsentText:
-    'I authorise Indian Overseas Bank to validate my PAN and to download my CKYC record for this credit application.',
+    'I authorise Indian Overseas Bank to check my bank records using my mobile number.',
+  hrmsConsentTitle: 'Bank Record Check Consent',
+  hrmsConsentFull:
+    'I authorise Indian Overseas Bank to use the mobile number shown in my employee record to search its own customer records and determine whether I am an existing customer of the bank.\n\nI authorise the bank to read the details held against any record it matches, including the name, date of birth, address and PAN recorded there, and to use those details to progress this credit application.\n\nI understand that the outcome of this check determines what the bank asks of me next, and that where the matched record already holds the details required, I will not be asked to provide them again.\n\nI understand that Indian Overseas Bank will keep this data secure and confidential and will not use it for any purpose other than verifying my identity and assessing this application.',
   hrmsContinueBtn: 'Continue',
 
   // ── HRMS details screen — record error ──
@@ -192,40 +162,6 @@ const English: HrmsStrings = {
   hrmsBankName: 'Indian Overseas Bank',
   hrmsBadgeInstant: 'Get credit instantly',
   hrmsBadgeSecure: 'Safe and Secure',
-
-  // ── Account choice screen ──
-  accountChoiceTitle: 'Do You Have an IOB Account?',
-  accountChoiceSubtitle:
-    'We need this to verify your identity and complete your credit application.',
-  accountChoiceHasAccount: 'I have an IOB account',
-  accountChoiceNoAccount: "I don't have an IOB account",
-  accountChoiceNoAccountContext:
-    'We will continue your verification with your Aadhaar and PAN.',
-  accountChoiceSelectedMarker: 'Selected',
-  accountChoiceContinueBtn: 'Continue',
-  accountChoiceBankConsentText:
-    'I authorise Indian Overseas Bank to check my bank records.',
-  accountChoiceBankConsentTitle: 'Bank Record Consent',
-  accountChoiceBankConsentFull:
-    'I authorise Indian Overseas Bank to access and verify the account records held against the account number I have provided, including the name, date of birth, address and PAN recorded against it.\n\nI confirm that the account number I have provided belongs to me and that I am authorised to permit these checks against it.\n\nI understand that Indian Overseas Bank will keep this data secure and confidential, and will not use it for any purpose other than verifying my identity and assessing this application.',
-  accountChoiceCkycConsentText:
-    'I authorise Indian Overseas Bank to download my CKYC record for verification.',
-  accountChoiceCkycConsentTitle: 'CKYC Consent',
-  accountChoiceCkycConsentFull:
-    'I authorise Indian Overseas Bank to retrieve my Central KYC (CKYC) record from the Central KYC Registry using the identifiers held against my account, and to use the retrieved details for identity verification in this credit application.\n\nI understand that the retrieved record may include my name, date of birth, address, photograph and the identity documents registered against my CKYC identifier.\n\nI understand that Indian Overseas Bank shall ensure the security and confidentiality of the retrieved data and shall not use it for any purpose beyond this application.',
-
-  // ── IOB account entry screen ──
-  accountEntryTitle: 'Enter Your IOB Account Number',
-  accountEntrySubtitle:
-    'We use your account number to retrieve the PAN already held in your account record.',
-  accountEntryLabel: 'IOB Account Number',
-  accountEntryPlaceholder: 'Enter your account number',
-  accountEntryHelperText: 'Your account number must contain 9 to 18 digits.',
-  accountEntryShortError: 'Your account number must contain 9 to 18 digits.',
-  accountEntryPanFound: 'PAN found in your account record',
-  accountEntryPanAbsent:
-    'No PAN is linked to this account. Aadhaar verification is required.',
-  accountEntryContinueBtn: 'Continue',
 
   // ── PAN + Aadhaar entry screen ──
   panAadhaarTitle: 'Enter Your PAN and Aadhaar',
@@ -258,15 +194,12 @@ const English: HrmsStrings = {
   ckycOtpSubtitle: 'Enter the 6-digit OTP sent to {mobile}',
   ckycConfirmBtn: 'Confirm with OTP',
 
-  // ── HRMS progress-step labels (Simulated_Backend) ──
-  stepHrmsFetch: 'Fetching your employee details from HRMS…',
-  stepCkycId: 'Retrieving your CKYC identifier…',
-  stepPanDedupe: 'Checking your PAN against bank records…',
-  stepAccountPan: 'Retrieving the PAN from your account record…',
-  stepCkycVerify: 'Verifying your CKYC record…',
-  stepAccountPanAbsent: 'Checking your account record for a PAN…',
-  stepCkycByAadhaar: 'Retrieving your CKYC record using your Aadhaar number…',
-  stepCifCreate: 'Creating your customer record (CIF)…',
+  // ── CKYC download consent, PAN-keyed (the shared OTP screen) ──
+  ckycPanConsentText:
+    'I authorise Indian Overseas Bank to download my CKYC record for verification.',
+  ckycPanConsentTitle: 'CKYC Download Consent',
+  ckycPanConsentFull:
+    'I authorise Indian Overseas Bank to retrieve my Know Your Customer (KYC) record from the Central KYC Registry (CKYCR) using my PAN, and to use the retrieved details to establish my identity for this credit application.\n\nI understand that the record retrieved may include my name, date of birth, address, photograph and the identity documents registered against my CKYC identifier.\n\nI understand that Indian Overseas Bank shall keep the retrieved data secure and confidential, shall not share it except as required by law or by the regulator, and shall retain it only for as long as the applicable regulations require.\n\nI confirm that this authorisation is given voluntarily and that the PAN used for this retrieval is my own.',
 
   // ── Shared screens — CKYC dedupe banner and PAN row ──
   dedupeEtbBanner: 'Existing bank customer record found',
@@ -301,7 +234,10 @@ const Tamil: HrmsStrings = {
 
   // ── HRMS details screen — consent and controls ──
   hrmsConsentText:
-    'இந்தக் கடன் விண்ணப்பத்திற்காக எனது PAN ஐ சரிபார்க்கவும், எனது CKYC பதிவைப் பெறவும் இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
+    'எனது மொபைல் எண்ணைப் பயன்படுத்தி எனது வங்கிப் பதிவுகளைச் சரிபார்க்க இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
+  hrmsConsentTitle: 'வங்கிப் பதிவு சரிபார்ப்பு சம்மதம்',
+  hrmsConsentFull:
+    'எனது ஊழியர் பதிவில் காட்டப்பட்டுள்ள மொபைல் எண்ணைப் பயன்படுத்தி, நான் வங்கியின் ஏற்கனவே உள்ள வாடிக்கையாளரா என்பதைத் தீர்மானிக்க இந்தியன் ஓவர்சீஸ் வங்கி தனது வாடிக்கையாளர் பதிவுகளில் தேட நான் அனுமதி அளிக்கிறேன்.\n\nபொருந்தும் பதிவில் உள்ள விவரங்களை — பெயர், பிறந்த தேதி, முகவரி மற்றும் PAN உள்பட — படித்து, இந்தக் கடன் விண்ணப்பத்தை முன்னெடுக்கப் பயன்படுத்த வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.\n\nஇந்தச் சரிபார்ப்பின் முடிவு அடுத்து வங்கி என்னிடம் என்ன கேட்கும் என்பதைத் தீர்மானிக்கிறது என்பதையும், பொருந்திய பதிவில் தேவையான விவரங்கள் ஏற்கனவே இருந்தால் அவற்றை மீண்டும் வழங்கக் கேட்கப்படமாட்டேன் என்பதையும் நான் புரிந்துகொள்கிறேன்.',
   hrmsContinueBtn: 'தொடரவும்',
 
   // ── HRMS details screen — record error ──
@@ -314,40 +250,6 @@ const Tamil: HrmsStrings = {
   hrmsBankName: 'இந்தியன் ஓவர்சீஸ் வங்கி',
   hrmsBadgeInstant: 'உடனடி கடன்',
   hrmsBadgeSecure: 'பாதுகாப்பானது',
-
-  // ── Account choice screen ──
-  accountChoiceTitle: 'உங்களுக்கு IOB கணக்கு உள்ளதா?',
-  accountChoiceSubtitle:
-    'உங்கள் அடையாளத்தைச் சரிபார்த்து உங்கள் கடன் விண்ணப்பத்தை முடிக்க இது தேவை.',
-  accountChoiceHasAccount: 'எனக்கு IOB கணக்கு உள்ளது',
-  accountChoiceNoAccount: 'எனக்கு IOB கணக்கு இல்லை',
-  accountChoiceNoAccountContext:
-    'உங்கள் ஆதார் மற்றும் PAN மூலம் உங்கள் சரிபார்ப்பைத் தொடர்வோம்.',
-  accountChoiceSelectedMarker: 'தேர்ந்தெடுக்கப்பட்டது',
-  accountChoiceContinueBtn: 'தொடரவும்',
-  accountChoiceBankConsentText:
-    'எனது வங்கிப் பதிவுகளைச் சரிபார்க்க இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
-  accountChoiceBankConsentTitle: 'வங்கிப் பதிவு சம்மதம்',
-  accountChoiceBankConsentFull:
-    'நான் அளித்த கணக்கு எண்ணுக்கு எதிராக உள்ள கணக்குப் பதிவுகளை — அதில் பதிவு செய்யப்பட்ட பெயர், பிறந்த தேதி, முகவரி மற்றும் PAN உள்பட — அணுகி சரிபார்க்க இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.\n\nநான் அளித்த கணக்கு எண் எனக்குச் சொந்தமானது என்பதையும், இந்தச் சரிபார்ப்புகளுக்கு அனுமதி அளிக்க எனக்கு உரிமை உள்ளது என்பதையும் உறுதிப்படுத்துகிறேன்.',
-  accountChoiceCkycConsentText:
-    'சரிபார்ப்புக்காக எனது CKYC பதிவைப் பெற இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
-  accountChoiceCkycConsentTitle: 'CKYC சம்மதம்',
-  accountChoiceCkycConsentFull:
-    'எனது கணக்கில் உள்ள அடையாளங்களைப் பயன்படுத்தி மைய KYC (CKYC) பதிவேட்டிலிருந்து எனது CKYC பதிவைப் பெறவும், பெறப்பட்ட விவரங்களை இந்தக் கடன் விண்ணப்பத்தில் அடையாள சரிபார்ப்புக்குப் பயன்படுத்தவும் இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.\n\nபெறப்படும் பதிவில் எனது பெயர், பிறந்த தேதி, முகவரி, புகைப்படம் மற்றும் எனது CKYC அடையாளத்தில் பதிவு செய்யப்பட்ட ஆவணங்கள் இருக்கக்கூடும் என்பதை நான் புரிந்துகொள்கிறேன்.',
-
-  // ── IOB account entry screen ──
-  accountEntryTitle: 'உங்கள் IOB கணக்கு எண்ணை உள்ளிடவும்',
-  accountEntrySubtitle:
-    'உங்கள் கணக்குப் பதிவில் ஏற்கனவே உள்ள PAN ஐப் பெற உங்கள் கணக்கு எண்ணைப் பயன்படுத்துகிறோம்.',
-  accountEntryLabel: 'IOB கணக்கு எண்',
-  accountEntryPlaceholder: 'உங்கள் கணக்கு எண்ணை உள்ளிடவும்',
-  accountEntryHelperText: 'உங்கள் கணக்கு எண் 9 முதல் 18 இலக்கங்கள் கொண்டிருக்க வேண்டும்.',
-  accountEntryShortError: 'உங்கள் கணக்கு எண் 9 முதல் 18 இலக்கங்கள் கொண்டிருக்க வேண்டும்.',
-  accountEntryPanFound: 'உங்கள் கணக்குப் பதிவில் PAN கண்டறியப்பட்டது',
-  accountEntryPanAbsent:
-    'இந்தக் கணக்குடன் எந்த PAN உம் இணைக்கப்படவில்லை. ஆதார் சரிபார்ப்பு தேவை.',
-  accountEntryContinueBtn: 'தொடரவும்',
 
   // ── PAN + Aadhaar entry screen ──
   panAadhaarTitle: 'உங்கள் PAN மற்றும் ஆதார் எண்ணை உள்ளிடவும்',
@@ -379,15 +281,12 @@ const Tamil: HrmsStrings = {
   ckycOtpSubtitle: '{mobile} க்கு அனுப்பப்பட்ட 6 இலக்க OTP ஐ உள்ளிடவும்',
   ckycConfirmBtn: 'OTP மூலம் உறுதிப்படுத்தவும்',
 
-  // ── HRMS progress-step labels (Simulated_Backend) ──
-  stepHrmsFetch: 'HRMS இலிருந்து உங்கள் ஊழியர் விவரங்கள் பெறப்படுகின்றன…',
-  stepCkycId: 'உங்கள் CKYC அடையாள எண் பெறப்படுகிறது…',
-  stepPanDedupe: 'உங்கள் PAN வங்கிப் பதிவுகளுடன் சரிபார்க்கப்படுகிறது…',
-  stepAccountPan: 'உங்கள் கணக்குப் பதிவிலிருந்து PAN பெறப்படுகிறது…',
-  stepCkycVerify: 'உங்கள் CKYC பதிவு சரிபார்க்கப்படுகிறது…',
-  stepAccountPanAbsent: 'உங்கள் கணக்குப் பதிவில் PAN உள்ளதா எனச் சரிபார்க்கப்படுகிறது…',
-  stepCkycByAadhaar: 'உங்கள் ஆதார் எண்ணைப் பயன்படுத்தி உங்கள் CKYC பதிவு பெறப்படுகிறது…',
-  stepCifCreate: 'உங்கள் வாடிக்கையாளர் பதிவு (CIF) உருவாக்கப்படுகிறது…',
+  // ── CKYC download consent, PAN-keyed (the shared OTP screen) ──
+  ckycPanConsentText:
+    'சரிபார்ப்புக்காக எனது CKYC பதிவைப் பெற இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
+  ckycPanConsentTitle: 'CKYC பதிவிறக்க சம்மதம்',
+  ckycPanConsentFull:
+    'எனது PAN ஐப் பயன்படுத்தி மைய KYC பதிவேட்டிலிருந்து (CKYCR) எனது KYC பதிவைப் பெறவும், பெறப்பட்ட விவரங்களை இந்தக் கடன் விண்ணப்பத்தில் எனது அடையாளத்தை நிறுவப் பயன்படுத்தவும் இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.\n\nபெறப்படும் பதிவில் எனது பெயர், பிறந்த தேதி, முகவரி, புகைப்படம் மற்றும் எனது CKYC அடையாளத்தில் பதிவு செய்யப்பட்ட ஆவணங்கள் இருக்கக்கூடும் என்பதை நான் புரிந்துகொள்கிறேன்.\n\nபெறப்பட்ட தரவை இந்தியன் ஓவர்சீஸ் வங்கி பாதுகாப்பாகவும் ரகசியமாகவும் வைத்திருக்கும் என்பதை நான் புரிந்துகொள்கிறேன்.',
 
   // ── Shared screens — CKYC dedupe banner and PAN row ──
   dedupeEtbBanner: 'ஏற்கனவே உள்ள வங்கி வாடிக்கையாளர் பதிவு கண்டறியப்பட்டது',

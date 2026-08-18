@@ -2,8 +2,8 @@
  * HRMS journey state — read/write/reset over `sessionStorage`.
  *
  * This module is pure: no React, no routing. It holds the values an HRMS
- * journey captures as the customer moves through it (consent, account choice,
- * account number, Aadhaar, PAN) so later screens can read them back.
+ * journey captures as the customer moves through it (consent, Aadhaar, PAN) so
+ * later screens can read them back.
  *
  * Storage split, deliberately:
  *   • `activeFlow` stays in **localStorage** — the selected demo journey should
@@ -13,7 +13,7 @@
  */
 
 import {
-  ACCOUNT_RECORD_PAN,
+  BANK_RECORD_PAN,
   HRMS_EMPLOYEE,
   HRMS_FLOWS,
   type HrmsFlowId,
@@ -24,27 +24,20 @@ const KEY = 'hrmsJourney'; // sessionStorage
 export interface HrmsJourneyState {
   /** The flow this state belongs to. A mismatch with the requested flow forces a reset. */
   flow: HrmsFlowId;
+  /** Bank-record check consent, given on the landing screen to authorise the dedupe. */
   consentAccepted: boolean;
-  accountChoice: 'has-account' | 'no-account' | null;
-  iobAccountNumber: string;
   /** 12 digits, unmasked, captured on PAN_Aadhaar_Entry_Screen or AadhaarVerificationPage. */
   aadhaarNumber: string;
   /** '' when no PAN is available. */
   pan: string;
-  panSource: 'hrms' | 'account-record' | 'user' | 'none';
+  panSource: 'hrms' | 'bank-record' | 'user' | 'none';
   /** Index into the flow's `aadhaarSegments`. */
   aadhaarSegmentIndex: number;
 }
 
-const ACCOUNT_CHOICES: ReadonlyArray<HrmsJourneyState['accountChoice']> = [
-  'has-account',
-  'no-account',
-  null,
-];
-
 const PAN_SOURCES: ReadonlyArray<HrmsJourneyState['panSource']> = [
   'hrms',
-  'account-record',
+  'bank-record',
   'user',
   'none',
 ];
@@ -54,16 +47,14 @@ const PAN_SOURCES: ReadonlyArray<HrmsJourneyState['panSource']> = [
  *
  * A flow that declares `hrmsPanPresent` starts with the HRMS employee's PAN
  * already in hand, so `pan` and `panSource` reflect that. Every other flow
- * starts with no PAN and discovers one later (account record, or the customer
- * typing it on PAN_Aadhaar_Entry_Screen).
+ * starts with no PAN and discovers one later (from the bank record the mobile
+ * dedupe matches, or from the customer typing it on PAN_Aadhaar_Entry_Screen).
  */
 function freshState(flow: HrmsFlowId): HrmsJourneyState {
   const hrmsPanPresent = HRMS_FLOWS[flow].hrmsPanPresent;
   return {
     flow,
     consentAccepted: false,
-    accountChoice: null,
-    iobAccountNumber: '',
     aadhaarNumber: '',
     pan: hrmsPanPresent ? HRMS_EMPLOYEE.pan : '',
     panSource: hrmsPanPresent ? 'hrms' : 'none',
@@ -84,8 +75,6 @@ function isJourneyState(value: unknown, flow: HrmsFlowId): value is HrmsJourneyS
     // Staleness gate: state written under a different flow is discarded.
     state.flow === flow &&
     typeof state.consentAccepted === 'boolean' &&
-    ACCOUNT_CHOICES.includes(state.accountChoice as HrmsJourneyState['accountChoice']) &&
-    typeof state.iobAccountNumber === 'string' &&
     typeof state.aadhaarNumber === 'string' &&
     typeof state.pan === 'string' &&
     PAN_SOURCES.includes(state.panSource as HrmsJourneyState['panSource']) &&
@@ -196,11 +185,11 @@ const PAN_PATTERN = /^[A-Z]{5}\d{4}[A-Z]$/;
  * The PAN string to display on `CKYCCustomerDetailsPage`, per the flow's
  * declared `ckycDetails.panSource`:
  *
- *   • `'hrms'`           -> `HRMS_EMPLOYEE.pan`   (flows 1, 2)
- *   • `'account-record'` -> `ACCOUNT_RECORD_PAN`  (flow 3)
- *   • `'journey'`        -> the PAN the customer typed, or `''` when the
- *                           optional field was left blank (flow 4)
- *   • `'none'`           -> `''`                  (flow 5)
+ *   • `'hrms'`        -> `HRMS_EMPLOYEE.pan` (flows 1, 2)
+ *   • `'bank-record'` -> `BANK_RECORD_PAN`   (flow 3)
+ *   • `'journey'`     -> the PAN the customer typed, or `''` when the optional
+ *                        field was left blank (flow 4)
+ *   • `'none'`        -> `''`                (flow 5)
  *
  * The result is always either empty or a well-formed PAN (Property 21). The
  * `'journey'` value comes from storage, which is untrusted, so a malformed
@@ -213,8 +202,8 @@ export function resolveDisplayPan(flow: HrmsFlowId): string {
     switch (HRMS_FLOWS[flow].ckycDetails.panSource) {
       case 'hrms':
         return HRMS_EMPLOYEE.pan as string;
-      case 'account-record':
-        return ACCOUNT_RECORD_PAN;
+      case 'bank-record':
+        return BANK_RECORD_PAN;
       case 'journey':
         return readJourney(flow).pan;
       case 'none':
