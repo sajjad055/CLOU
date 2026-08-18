@@ -177,7 +177,7 @@ const English: HrmsStrings = {
   hrmsConsentTitle: 'Bank Record Check Consent',
   hrmsConsentFull:
     'I authorise Indian Overseas Bank to use the mobile number shown in my employee record to search its own customer records and determine whether I am an existing customer of the bank.\n\nI authorise the bank to read the details held against any record it matches, including the name, date of birth, address and PAN recorded there, and to use those details to progress this credit application.\n\nI understand that the outcome of this check determines what the bank asks of me next, and that where the matched record already holds the details required, I will not be asked to provide them again.\n\nI understand that Indian Overseas Bank will keep this data secure and confidential and will not use it for any purpose other than verifying my identity and assessing this application.',
-  hrmsContinueBtn: 'Continue',
+  hrmsContinueBtn: 'Get started',
   hrmsGateSheetTitle: 'Accept declarations',
   hrmsGateSheetAcceptBtn: 'Agree and continue',
 
@@ -279,7 +279,7 @@ const Tamil: HrmsStrings = {
   hrmsConsentTitle: 'வங்கிப் பதிவு சரிபார்ப்பு சம்மதம்',
   hrmsConsentFull:
     'எனது ஊழியர் பதிவில் காட்டப்பட்டுள்ள மொபைல் எண்ணைப் பயன்படுத்தி, நான் வங்கியின் ஏற்கனவே உள்ள வாடிக்கையாளரா என்பதைத் தீர்மானிக்க இந்தியன் ஓவர்சீஸ் வங்கி தனது வாடிக்கையாளர் பதிவுகளில் தேட நான் அனுமதி அளிக்கிறேன்.\n\nபொருந்தும் பதிவில் உள்ள விவரங்களை — பெயர், பிறந்த தேதி, முகவரி மற்றும் PAN உள்பட — படித்து, இந்தக் கடன் விண்ணப்பத்தை முன்னெடுக்கப் பயன்படுத்த வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.\n\nஇந்தச் சரிபார்ப்பின் முடிவு அடுத்து வங்கி என்னிடம் என்ன கேட்கும் என்பதைத் தீர்மானிக்கிறது என்பதையும், பொருந்திய பதிவில் தேவையான விவரங்கள் ஏற்கனவே இருந்தால் அவற்றை மீண்டும் வழங்கக் கேட்கப்படமாட்டேன் என்பதையும் நான் புரிந்துகொள்கிறேன்.',
-  hrmsContinueBtn: 'தொடரவும்',
+  hrmsContinueBtn: 'தொடங்குங்கள்',
   hrmsGateSheetTitle: 'அறிவிப்புகளை ஏற்கவும்',
   hrmsGateSheetAcceptBtn: 'ஒப்புக்கொண்டு தொடரவும்',
 
