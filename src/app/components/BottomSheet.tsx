@@ -149,15 +149,21 @@ export function BottomSheet({
               <div className="w-10 h-1 rounded-full bg-[#d9d9d9]" aria-hidden="true" />
             </div>
 
-            <div className="px-6 pb-3 flex items-start justify-between gap-3 border-b border-[#e5e7eb] shrink-0">
-              <h2 id={titleId} className="text-base font-semibold text-[#111827] pt-0.5">
+            {/* Title and close control share a centre line. Flexbox does the
+                alignment: the previous version top-aligned them and then tried
+                to correct with `pt-0.5` on the title and `-mt-1` on the button,
+                which left the two a few pixels apart. `-mr-2` stays, so the
+                44px target can overhang the padding without the icon drifting
+                in from the sheet's visual edge. */}
+            <div className="px-6 pb-3 flex items-center justify-between gap-3 border-b border-[#e5e7eb] shrink-0">
+              <h2 id={titleId} className="text-xl font-semibold text-[#111827]">
                 {title}
               </h2>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label={closeLabel}
-                className="-mt-1 -mr-2 w-11 h-11 flex items-center justify-center rounded-lg text-[#6b7280] hover:bg-[#f9fafb] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] shrink-0"
+                className="-mr-2 w-11 h-11 flex items-center justify-center rounded-lg text-[#6b7280] hover:bg-[#f9fafb] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] shrink-0"
               >
                 <X className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
               </button>
