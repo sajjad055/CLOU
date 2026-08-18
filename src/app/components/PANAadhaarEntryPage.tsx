@@ -191,13 +191,6 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
       <main className="flex-1 overflow-y-auto pb-40">
         <div className="max-w-lg mx-auto px-4 pt-8">
 
-          <motion.div
-            {...(reduceMotion ? {} : { initial: { scale: 0, opacity: 0 }, animate: { scale: 1, opacity: 1 }, transition: { duration: 0.4 } })}
-            className="flex justify-center mb-8"
-          >
-            <img src={aadhaarImg} alt="" aria-hidden="true" className="w-[62px] h-auto object-contain" />
-          </motion.div>
-
           <motion.div {...fadeIn(0.1)} className="text-center mb-8">
             <h1 className="text-xl font-semibold text-[#111827] mb-1">
               {tr(selectedLanguage, 'panAadhaarTitle')}
@@ -207,19 +200,90 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
             </p>
           </motion.div>
 
-          {/* ── PAN — optional ── */}
+          {/* ── Aadhaar — required, masked. First, because it is the field the
+              verification actually runs on. Only the optional field carries a
+              marker, so this label stays plain and `required` +
+              `aria-required` carry the obligation. ── */}
           <motion.div {...fadeIn(0.2)} className="mb-6">
-            <div className="flex items-baseline justify-between mb-2 gap-2">
-              <label
-                htmlFor="hrms-pan"
-                className="block text-[12px] font-semibold text-[#666666] uppercase tracking-wide"
-              >
-                {tr(selectedLanguage, 'panAadhaarPanLabel')}
-              </label>
-              <span className="text-[11px] font-medium text-[#6b7280]">
-                {tr(selectedLanguage, 'panAadhaarPanOptionalMarker')}
-              </span>
+            <label
+              htmlFor="hrms-aadhaar"
+              className="block text-[12px] font-semibold text-[#666666] uppercase tracking-wide mb-2"
+            >
+              {tr(selectedLanguage, 'panAadhaarAadhaarLabel')}
+            </label>
+
+            <div className="relative">
+              <input
+                id="hrms-aadhaar"
+                type="text"
+                inputMode="numeric"
+                value={rawAadhaar}
+                onChange={(e) => handleAadhaarChange(e.target.value)}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
+                maxLength={AADHAAR_LENGTH}
+                required
+                aria-required="true"
+                autoComplete="off"
+                className="w-full bg-transparent border border-[#e5e7eb] rounded-lg pl-4 pr-14 h-14 focus:border-[#254576] focus:ring-1 focus:ring-[#254576]/20 transition-all outline-none text-[16px] font-semibold text-transparent caret-transparent"
+                placeholder=""
+              />
+
+              {/* Masked display overlay — the input itself renders transparent
+                  text. Right padding matches the input so the masked digits
+                  never run under the logo. */}
+              <div className="absolute inset-0 flex items-center pl-4 pr-14 pointer-events-none" aria-hidden="true">
+                {!inputFocused && rawAadhaar.length === 0 ? (
+                  <span className="text-sm text-[#9e9e9e] font-normal">{placeholder}</span>
+                ) : (
+                  <span className="tracking-[0.1em] flex items-center">
+                    {formattedDisplay.map((item, i) => {
+                      const cursorIndex = formattedDisplay.findIndex(x => x.type === 'placeholder');
+                      const showCursor = inputFocused && i === cursorIndex;
+                      return (
+                        <span key={i} className="relative inline-flex items-center">
+                          {showCursor && (
+                            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[1.5px] h-5 bg-[#212121] animate-pulse" />
+                          )}
+                          {item.type === 'space' ? (
+                            <span className="inline-block w-2.5" />
+                          ) : item.type === 'filled' ? (
+                            <span className="text-[14px] font-semibold text-[#111827]">{item.char}</span>
+                          ) : (
+                            <span className="text-[12px] text-[#6b7280]">*</span>
+                          )}
+                        </span>
+                      );
+                    })}
+                    {inputFocused && rawAadhaar.length === AADHAAR_LENGTH && (
+                      <span className="relative inline-flex items-center">
+                        <span className="w-[1.5px] h-5 bg-[#212121] animate-pulse" />
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
+
+              {/* End icon. Decorative — the label already names the field — so it
+                  is hidden from assistive tech. */}
+              <img
+                src={aadhaarImg}
+                alt=""
+                aria-hidden="true"
+                className="absolute right-4 top-1/2 -translate-y-1/2 h-7 w-auto object-contain pointer-events-none"
+              />
             </div>
+          </motion.div>
+
+          {/* ── PAN — optional, marked inline in the label ── */}
+          <motion.div {...fadeIn(0.3)} className="mb-6">
+            <label
+              htmlFor="hrms-pan"
+              className="block text-[12px] font-semibold text-[#666666] uppercase tracking-wide mb-2"
+            >
+              {tr(selectedLanguage, 'panAadhaarPanLabel')} (
+              {tr(selectedLanguage, 'panAadhaarPanOptionalMarker')})
+            </label>
 
             <div
               className={`flex items-center bg-transparent border rounded-lg px-4 h-14 transition-all focus-within:ring-1 ${
@@ -254,71 +318,6 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
                 {tr(selectedLanguage, 'panAadhaarPanFormatError')}
               </p>
             )}
-          </motion.div>
-
-          {/* ── Aadhaar — required, masked ── */}
-          <motion.div {...fadeIn(0.3)} className="mb-6">
-            <div className="flex items-baseline justify-between mb-2 gap-2">
-              <label
-                htmlFor="hrms-aadhaar"
-                className="block text-[12px] font-semibold text-[#666666] uppercase tracking-wide"
-              >
-                {tr(selectedLanguage, 'panAadhaarAadhaarLabel')}
-              </label>
-              <span className="text-[11px] font-medium text-[#315C9D]">
-                {tr(selectedLanguage, 'panAadhaarAadhaarRequiredMarker')}
-              </span>
-            </div>
-
-            <div className="relative">
-              <input
-                id="hrms-aadhaar"
-                type="text"
-                inputMode="numeric"
-                value={rawAadhaar}
-                onChange={(e) => handleAadhaarChange(e.target.value)}
-                onFocus={() => setInputFocused(true)}
-                onBlur={() => setInputFocused(false)}
-                maxLength={AADHAAR_LENGTH}
-                required
-                autoComplete="off"
-                className="w-full bg-transparent border border-[#e5e7eb] rounded-lg px-4 h-14 focus:border-[#254576] focus:ring-1 focus:ring-[#254576]/20 transition-all outline-none text-[16px] font-semibold text-transparent caret-transparent"
-                placeholder=""
-              />
-
-              {/* Masked display overlay — the input itself renders transparent text. */}
-              <div className="absolute inset-0 flex items-center px-4 pointer-events-none" aria-hidden="true">
-                {!inputFocused && rawAadhaar.length === 0 ? (
-                  <span className="text-sm text-[#9e9e9e] font-normal">{placeholder}</span>
-                ) : (
-                  <span className="tracking-[0.1em] flex items-center">
-                    {formattedDisplay.map((item, i) => {
-                      const cursorIndex = formattedDisplay.findIndex(x => x.type === 'placeholder');
-                      const showCursor = inputFocused && i === cursorIndex;
-                      return (
-                        <span key={i} className="relative inline-flex items-center">
-                          {showCursor && (
-                            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[1.5px] h-5 bg-[#212121] animate-pulse" />
-                          )}
-                          {item.type === 'space' ? (
-                            <span className="inline-block w-2.5" />
-                          ) : item.type === 'filled' ? (
-                            <span className="text-[14px] font-semibold text-[#111827]">{item.char}</span>
-                          ) : (
-                            <span className="text-[12px] text-[#6b7280]">*</span>
-                          )}
-                        </span>
-                      );
-                    })}
-                    {inputFocused && rawAadhaar.length === AADHAAR_LENGTH && (
-                      <span className="relative inline-flex items-center">
-                        <span className="w-[1.5px] h-5 bg-[#212121] animate-pulse" />
-                      </span>
-                    )}
-                  </span>
-                )}
-              </div>
-            </div>
           </motion.div>
 
         </div>
