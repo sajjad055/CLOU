@@ -64,7 +64,6 @@ export interface HrmsStrings {
    * and two checkboxes above the button would crowd an already heavy screen.
    */
   hrmsGateSheetTitle: string;
-  hrmsGateSheetIntro: string;
   hrmsGateSheetAcceptBtn: string;
 
   // ── HRMS details screen — record error ──
@@ -179,9 +178,7 @@ const English: HrmsStrings = {
   hrmsConsentFull:
     'I authorise Indian Overseas Bank to use the mobile number shown in my employee record to search its own customer records and determine whether I am an existing customer of the bank.\n\nI authorise the bank to read the details held against any record it matches, including the name, date of birth, address and PAN recorded there, and to use those details to progress this credit application.\n\nI understand that the outcome of this check determines what the bank asks of me next, and that where the matched record already holds the details required, I will not be asked to provide them again.\n\nI understand that Indian Overseas Bank will keep this data secure and confidential and will not use it for any purpose other than verifying my identity and assessing this application.',
   hrmsContinueBtn: 'Continue',
-  hrmsGateSheetTitle: 'Before we continue',
-  hrmsGateSheetIntro:
-    'Your employee record already includes your PAN, so we can complete both checks in one go. Please confirm the two permissions below. You will confirm them with an OTP on the next screen.',
+  hrmsGateSheetTitle: 'Accept declarations',
   hrmsGateSheetAcceptBtn: 'Agree and continue',
 
   // ── HRMS details screen — record error ──
@@ -283,9 +280,7 @@ const Tamil: HrmsStrings = {
   hrmsConsentFull:
     'எனது ஊழியர் பதிவில் காட்டப்பட்டுள்ள மொபைல் எண்ணைப் பயன்படுத்தி, நான் வங்கியின் ஏற்கனவே உள்ள வாடிக்கையாளரா என்பதைத் தீர்மானிக்க இந்தியன் ஓவர்சீஸ் வங்கி தனது வாடிக்கையாளர் பதிவுகளில் தேட நான் அனுமதி அளிக்கிறேன்.\n\nபொருந்தும் பதிவில் உள்ள விவரங்களை — பெயர், பிறந்த தேதி, முகவரி மற்றும் PAN உள்பட — படித்து, இந்தக் கடன் விண்ணப்பத்தை முன்னெடுக்கப் பயன்படுத்த வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.\n\nஇந்தச் சரிபார்ப்பின் முடிவு அடுத்து வங்கி என்னிடம் என்ன கேட்கும் என்பதைத் தீர்மானிக்கிறது என்பதையும், பொருந்திய பதிவில் தேவையான விவரங்கள் ஏற்கனவே இருந்தால் அவற்றை மீண்டும் வழங்கக் கேட்கப்படமாட்டேன் என்பதையும் நான் புரிந்துகொள்கிறேன்.',
   hrmsContinueBtn: 'தொடரவும்',
-  hrmsGateSheetTitle: 'தொடர்வதற்கு முன்',
-  hrmsGateSheetIntro:
-    'உங்கள் ஊழியர் பதிவில் ஏற்கனவே உங்கள் PAN உள்ளது, எனவே இரண்டு சரிபார்ப்புகளையும் ஒரே நேரத்தில் முடிக்க முடியும். கீழே உள்ள இரு அனுமதிகளையும் உறுதிப்படுத்தவும். அடுத்த திரையில் OTP மூலம் அவற்றை உறுதிப்படுத்துவீர்கள்.',
+  hrmsGateSheetTitle: 'அறிவிப்புகளை ஏற்கவும்',
   hrmsGateSheetAcceptBtn: 'ஒப்புக்கொண்டு தொடரவும்',
 
   // ── HRMS details screen — record error ──

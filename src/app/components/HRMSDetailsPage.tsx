@@ -564,27 +564,31 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
           </button>
         }
       >
-        <p className="text-sm text-[#6b7280] leading-relaxed mb-5">
-          {tr(language, 'hrmsGateSheetIntro')}
-        </p>
-
-        <div className="space-y-4">
-          <ConsentRow
-            id="hrms-gate-consent-bank"
-            checked={consentAccepted}
-            onToggle={handleToggleConsent}
-            text={tr(language, 'hrmsConsentText')}
-            readMoreLabel={tr(language, 'panAadhaarReadMore')}
-            onReadMore={() => setReadMoreFor('bank')}
-          />
-          <ConsentRow
-            id="hrms-gate-consent-ckyc"
-            checked={ckycConsentAccepted}
-            onToggle={handleToggleCkycConsent}
-            text={tr(language, 'ckycPanConsentText')}
-            readMoreLabel={tr(language, 'panAadhaarReadMore')}
-            onReadMore={() => setReadMoreFor('ckyc')}
-          />
+        {/* Both declarations as rows of one container, the same bordered and
+            divided treatment the account-choice options used. No intro copy: the
+            title says what to do and each row says what it authorises, so a
+            paragraph above them would only repeat that. */}
+        <div className="border border-[#e5e7eb] rounded-xl overflow-hidden divide-y divide-[#e5e7eb]">
+          <div className="p-4">
+            <ConsentRow
+              id="hrms-gate-consent-bank"
+              checked={consentAccepted}
+              onToggle={handleToggleConsent}
+              text={tr(language, 'hrmsConsentText')}
+              readMoreLabel={tr(language, 'panAadhaarReadMore')}
+              onReadMore={() => setReadMoreFor('bank')}
+            />
+          </div>
+          <div className="p-4">
+            <ConsentRow
+              id="hrms-gate-consent-ckyc"
+              checked={ckycConsentAccepted}
+              onToggle={handleToggleCkycConsent}
+              text={tr(language, 'ckycPanConsentText')}
+              readMoreLabel={tr(language, 'panAadhaarReadMore')}
+              onReadMore={() => setReadMoreFor('ckyc')}
+            />
+          </div>
         </div>
       </BottomSheet>
 
