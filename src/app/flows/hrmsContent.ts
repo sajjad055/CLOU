@@ -199,7 +199,7 @@ const English: HrmsStrings = {
   dedupeOutcomeBadge: 'Existing IOB customer',
   dedupeOutcomeTitle: "You're already an IOB customer",
   dedupeOutcomeSubtitle:
-    'Your application is almost complete. We found the details we needed in your bank record, so there is nothing more for you to enter.',
+    'We found your details in your bank record. Nothing more to enter.',
   dedupeOutcomeMatchedLabel: 'Matched using your registered mobile number',
   dedupeOutcomeRemainingLabel: 'One step left',
   dedupeOutcomeRemainingDetail:
@@ -303,7 +303,7 @@ const Tamil: HrmsStrings = {
   dedupeOutcomeBadge: 'ஏற்கனவே உள்ள IOB வாடிக்கையாளர்',
   dedupeOutcomeTitle: 'நீங்கள் ஏற்கனவே IOB வாடிக்கையாளர்',
   dedupeOutcomeSubtitle:
-    'உங்கள் விண்ணப்பம் கிட்டத்தட்ட முடிந்தது. தேவையான விவரங்களை உங்கள் வங்கிப் பதிவில் நாங்கள் கண்டோம், எனவே நீங்கள் மேலும் எதையும் உள்ளிடத் தேவையில்லை.',
+    'உங்கள் விவரங்களை வங்கிப் பதிவில் கண்டோம். மேலும் எதுவும் உள்ளிடத் தேவையில்லை.',
   dedupeOutcomeMatchedLabel: 'உங்கள் பதிவு செய்யப்பட்ட மொபைல் எண் மூலம் பொருந்தியது',
   dedupeOutcomeRemainingLabel: 'ஒரு படி மட்டுமே',
   dedupeOutcomeRemainingDetail:
