@@ -123,7 +123,39 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
   const recordComplete = isRecordComplete(HRMS_EMPLOYEE);
   const recordError = phase === 'review' && !recordComplete;
 
-  const panAvailable = definition.hrmsPanPresent;
+  /**
+   * The record as displayed. The PAN row is listed unconditionally with an empty
+   * value on the flows whose HRMS record carries none — the row renders the
+   * "not available" label instead, so the field is always accounted for.
+   *
+   * `mono` marks the values worth setting in a monospaced tabular face: fixed-format
+   * identifiers and dates, where consistent digit width aids scanning. Name and
+   * address are prose and stay in the body face.
+   */
+  const recordRows: Array<Array<{ label: string; value: string; mono?: boolean }>> = [
+    [{ label: tr(language, 'hrmsNameLabel'), value: HRMS_EMPLOYEE.name }],
+    [
+      {
+        label: tr(language, 'hrmsEmployeeIdLabel'),
+        value: HRMS_EMPLOYEE.employeeId,
+        mono: true,
+      },
+    ],
+    // Mobile and date of birth share a row: both are fixed-format, so the two
+    // columns hold a predictable width even at 320px.
+    [
+      { label: tr(language, 'hrmsMobileLabel'), value: HRMS_EMPLOYEE.mobile, mono: true },
+      { label: tr(language, 'hrmsDobLabel'), value: HRMS_EMPLOYEE.dob, mono: true },
+    ],
+    [
+      {
+        label: tr(language, 'hrmsPanLabel'),
+        value: definition.hrmsPanPresent ? HRMS_EMPLOYEE.pan : '',
+        mono: true,
+      },
+    ],
+    [{ label: tr(language, 'hrmsAddressLabel'), value: HRMS_EMPLOYEE.address }],
+  ];
 
   /**
    * Whether this screen asks for consent at all. Only the PAN-present flows have
@@ -297,54 +329,44 @@ function HRMSDetails({ flow }: { flow: HrmsFlowId }) {
                 </div>
               )}
 
-              {/* Fetched record. The name is not repeated here — it already leads
-                  the screen in the greeting above. Every value is text, never an
-                  input, so it cannot be changed by typing, pasting or selection.
-                  No icon column: the mobile/DOB row splits into two columns, and
-                  at 320px the icons would push the fixed-width values out of
-                  their column. */}
+              {/* Fetched record: name, employee ID, date of birth, PAN, address.
+                  Every value is text, never an input, so it cannot be changed by
+                  typing, pasting or selection. The PAN row is always present — it
+                  is part of what the record is expected to hold — and carries
+                  either the value or a visible "not available" label depending on
+                  the flow, so its absence reads as a stated fact rather than as a
+                  missing row. */}
               <motion.div
                 {...enter(0.2)}
-                className="bg-[#f9fafb] border border-[#e5e7eb] rounded-xl overflow-hidden mb-4"
+                className="bg-[#f9fafb] border border-[#e5e7eb] rounded-xl overflow-hidden mb-4 divide-y divide-[#e5e7eb]"
               >
-                {/* Mobile number and date of birth, side by side. Both values are
-                    monospaced and tabular, so the two columns hold a predictable
-                    width. */}
-                <div className="grid grid-cols-2 gap-3 p-4">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-[#666666] uppercase tracking-wide mb-0.5">
-                      {tr(language, 'hrmsMobileLabel')}
-                    </p>
-                    <p className="text-sm font-semibold text-[#212121] leading-snug font-mono tabular-nums">
-                      {HRMS_EMPLOYEE.mobile}
-                    </p>
+                {recordRows.map((row) => (
+                  <div
+                    key={row.map((field) => field.label).join('|')}
+                    className={`p-4 ${row.length > 1 ? 'grid grid-cols-2 gap-3' : ''}`}
+                  >
+                    {row.map((field) => (
+                      <div key={field.label} className="min-w-0">
+                        <p className="text-[11px] font-semibold text-[#666666] uppercase tracking-wide mb-0.5">
+                          {field.label}
+                        </p>
+                        {field.value ? (
+                          <p
+                            className={`text-sm font-semibold text-[#212121] leading-snug ${
+                              field.mono ? 'font-mono tracking-wide tabular-nums' : ''
+                            }`}
+                          >
+                            {field.value}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-[#6b7280] leading-snug">
+                            {tr(language, 'hrmsPanUnavailableLabel')}
+                          </p>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-[#666666] uppercase tracking-wide mb-0.5">
-                      {tr(language, 'hrmsDobLabel')}
-                    </p>
-                    <p className="text-sm font-semibold text-[#212121] leading-snug font-mono tabular-nums">
-                      {HRMS_EMPLOYEE.dob}
-                    </p>
-                  </div>
-                </div>
-
-                {/* PAN. Flows 1–2 show the HRMS PAN; flows 3–5 show the visible
-                    "not available in your HRMS record" label. */}
-                <div className="p-4 border-t border-[#e5e7eb]">
-                  <p className="text-[11px] font-semibold text-[#666666] uppercase tracking-wide mb-0.5">
-                    {tr(language, 'hrmsPanLabel')}
-                  </p>
-                  {panAvailable ? (
-                    <p className="text-sm font-semibold text-[#212121] leading-snug font-mono tracking-wide">
-                      {HRMS_EMPLOYEE.pan}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-[#6b7280] leading-snug">
-                      {tr(language, 'hrmsPanUnavailableLabel')}
-                    </p>
-                  )}
-                </div>
+                ))}
               </motion.div>
 
               {/* Banking partner and trust badges, carried over from LandingPage

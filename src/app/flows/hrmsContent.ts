@@ -33,9 +33,12 @@ export interface HrmsStrings {
   hrmsGreetingLead: string;
 
   // ── HRMS details screen — field labels ──
+  hrmsNameLabel: string;
+  hrmsEmployeeIdLabel: string;
   hrmsMobileLabel: string;
   hrmsDobLabel: string;
   hrmsPanLabel: string;
+  hrmsAddressLabel: string;
   hrmsPanUnavailableLabel: string;
 
   // ── HRMS details screen — consent and controls ──
@@ -166,9 +169,12 @@ const English: HrmsStrings = {
   hrmsGreetingLead: 'Get salary advances on your UPI',
 
   // ── HRMS details screen — field labels ──
+  hrmsNameLabel: 'Name',
+  hrmsEmployeeIdLabel: 'Employee ID',
   hrmsMobileLabel: 'Mobile Number',
   hrmsDobLabel: 'Date of Birth',
   hrmsPanLabel: 'PAN',
+  hrmsAddressLabel: 'Address',
   hrmsPanUnavailableLabel: 'Not available in your HRMS record',
 
   // ── HRMS details screen — consent and controls ──
@@ -285,9 +291,12 @@ const Tamil: HrmsStrings = {
   hrmsGreetingLead: 'உங்கள் UPI யில் சம்பள முன்பணம் பெறுங்கள்',
 
   // ── HRMS details screen — field labels ──
+  hrmsNameLabel: 'பெயர்',
+  hrmsEmployeeIdLabel: 'ஊழியர் அடையாள எண்',
   hrmsMobileLabel: 'மொபைல் எண்',
   hrmsDobLabel: 'பிறந்த தேதி',
   hrmsPanLabel: 'PAN',
+  hrmsAddressLabel: 'முகவரி',
   hrmsPanUnavailableLabel: 'உங்கள் HRMS பதிவில் கிடைக்கவில்லை',
 
   // ── HRMS details screen — consent and controls ──

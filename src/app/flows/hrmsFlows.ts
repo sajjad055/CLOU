@@ -141,10 +141,13 @@ export interface HrmsFlowDefinition {
 /** The single demo employee record every HRMS flow fetches. */
 export const HRMS_EMPLOYEE = {
   name: 'Aravind Kumar S.',
+  /** Government employee identifier the HRMS record is keyed on. */
+  employeeId: 'TN-EMP-4471902',
   mobile: '9876543210',
   dob: '12/03/1992',
   /** Used only when the flow declares `hrmsPanPresent`. */
   pan: 'ABCPK1234F',
+  address: 'No. 14, Anna Salai, Guindy, Chennai, Tamil Nadu 600032',
 } as const;
 
 /** PAN held by the IOB account record. Flow 3 only; flow 5's record has none. */
