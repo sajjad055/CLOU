@@ -19,7 +19,8 @@ import kalanjiyamLogo from '@/assets/kalanjiyam-logo.svg';
 import { Stepper } from './Stepper';
 import { EligibleAdvancesSelector } from './EligibleAdvancesSelector';
 import { ActivatedAdvancesList } from './ActivatedAdvancesList';
-import { getActiveFlow, hrmsEntryRoute } from '../flows/hrmsFlows';
+import { getActiveFlow, hrmsEntryRoute, isHrmsFlow } from '../flows/hrmsFlows';
+import { resetJourney } from '../flows/hrmsJourney';
 import { useLanguage } from '../hooks/useLanguage';
 import {
   KYC_STEPS,
@@ -122,13 +123,42 @@ export function HomePage() {
     });
   };
 
-  const flowEntryRoute = () => hrmsEntryRoute(getActiveFlow()) ?? '/advances-upi';
+  // Default HRMS journey to start from the home screen when no HRMS flow is
+  // already selected. Kept in sync with DEFAULT_FLOW in App.tsx.
+  const DEFAULT_HRMS_FLOW = 'hrms-pan-ntb';
+
+  /**
+   * Start (or continue) the KYC journey. The home screen always leads into the
+   * HRMS journey — if the active flow is a legacy/non-HRMS flow (e.g. stale
+   * storage), coerce it to the default HRMS flow so Get Started can never drop
+   * the user into the old CKYC/PAN entry.
+   */
+  const startKycJourney = () => {
+    let flow = getActiveFlow();
+    if (!isHrmsFlow(flow)) {
+      try {
+        localStorage.setItem('activeFlow', DEFAULT_HRMS_FLOW);
+      } catch {
+        // Storage unavailable — navigation below still targets the HRMS entry.
+      }
+      resetJourney();
+      flow = DEFAULT_HRMS_FLOW;
+    }
+    // Partway through → show the "continue where you left off" resume screen,
+    // which hands off to the middle of the HRMS journey (Aadhaar). A fresh start
+    // begins at the HRMS entry.
+    if (status === 'in-progress') {
+      navigate('/kyc-resume');
+      return;
+    }
+    navigate(hrmsEntryRoute(flow) ?? '/hrms-details');
+  };
 
   /** Where an advance card / the UPI card leads, given the current state. */
-  const advanceActionRoute = () => {
-    if (activated) return '/credit-line-dashboard';
-    if (kycDone) return '/sanctioned-offers';
-    return flowEntryRoute();
+  const handleAdvanceClick = () => {
+    if (activated) return navigate('/credit-line-dashboard');
+    if (kycDone) return navigate('/sanctioned-offers');
+    startKycJourney();
   };
 
   const tabs: { id: TabId; label: string }[] = [
@@ -247,19 +277,20 @@ export function HomePage() {
               <>
                 {renderLockedBanner()}
 
-            {/* Main feature — Advances on UPI. De-emphasised (white, not blue)
-                so it doesn't compete with the primary KYC module above it. */}
+            {/* Main feature — Advances on UPI. Muted (grey, no blue accent, faded)
+                so it recedes and doesn't compete with the KYC module above.
+                Still tappable. */}
             <button
-              onClick={() => navigate(advanceActionRoute())}
-              className="relative w-full bg-white border border-gray-100 text-[#111827] rounded-2xl px-5 py-4 flex items-center gap-4 mb-6 shadow-[0_1px_6px_rgba(0,0,0,0.04)] active:scale-[0.99] transition-transform text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+              onClick={handleAdvanceClick}
+              className="relative w-full bg-gray-50 border border-gray-100 text-gray-600 rounded-2xl px-5 py-4 flex items-center gap-4 mb-6 opacity-70 active:scale-[0.99] transition-transform text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
             >
-              <div className="w-12 h-12 rounded-xl bg-[#315C9D]/10 flex items-center justify-center shrink-0">
-                <Wallet className="w-6 h-6 text-[#315C9D]" aria-hidden="true" />
+              <div className="w-12 h-12 rounded-xl bg-gray-200/70 flex items-center justify-center shrink-0">
+                <Wallet className="w-6 h-6 text-gray-400" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <h3 className="text-sm font-bold leading-tight">{t.upiTitle}</h3>
-                  <span className="text-[9px] font-bold uppercase tracking-wide bg-[#315C9D]/10 text-[#315C9D] px-1.5 py-0.5 rounded-full">{t.upiNew}</span>
+                  <h3 className="text-sm font-bold leading-tight text-gray-700">{t.upiTitle}</h3>
+                  <span className="text-[9px] font-bold uppercase tracking-wide bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full">{t.upiNew}</span>
                 </div>
                 <p className="text-xs text-gray-500 leading-snug">{t.upiDesc}</p>
               </div>
@@ -277,7 +308,7 @@ export function HomePage() {
                 return (
                   <div key={item.id} className="relative">
                     <button
-                      onClick={() => navigate(advanceActionRoute())}
+                      onClick={handleAdvanceClick}
                       className="w-full flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3 pr-14 shadow-[0_1px_6px_rgba(0,0,0,0.04)] active:scale-[0.99] transition-transform text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
                     >
                       <div className="w-11 h-11 rounded-xl bg-[#315C9D]/10 flex items-center justify-center shrink-0">
@@ -349,7 +380,7 @@ export function HomePage() {
         )}
 
         <button
-          onClick={() => navigate(flowEntryRoute())}
+          onClick={startKycJourney}
           className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.99] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
         >
           {notStarted ? t.startKyc : t.continueKyc}
@@ -413,7 +444,7 @@ export function HomePage() {
           {/* CTA lives inside the module so it stays above the fold, before the
               step list. */}
           <button
-            onClick={() => navigate(flowEntryRoute())}
+            onClick={startKycJourney}
             className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.99] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
           >
             {notStarted ? t.startKyc : t.continueKyc}

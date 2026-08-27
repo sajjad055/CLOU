@@ -163,6 +163,16 @@ export function DevPreview() {
   // Jump the home screen straight to one of its four states, then land on it.
   const handleHomeState = (kind: HomeStateKind) => {
     clearHomeState();
+    // Pin the journey to the HRMS PAN-present, NTB flow and start it clean, so
+    // Get Started / Continue from any of these states enters that HRMS journey
+    // deterministically (never a stale legacy CKYC flow).
+    try {
+      localStorage.setItem('activeFlow', 'hrms-pan-ntb');
+    } catch {
+      // Storage unavailable — startKycJourney on the home screen still coerces
+      // to an HRMS flow before navigating.
+    }
+    resetJourney();
     if (kind === 'in-progress') {
       setCompletedSteps(Math.max(1, Math.round(KYC_TOTAL_STEPS / 2)));
     } else if (kind === 'kyc-complete') {
