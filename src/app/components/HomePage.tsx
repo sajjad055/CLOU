@@ -8,30 +8,111 @@ import {
   PartyPopper,
   IndianRupee,
   PiggyBank,
-  FileText,
-  BarChart3,
-  Umbrella,
-  RefreshCcw,
   Heart,
   ChevronRight,
+  ShieldCheck,
+  CheckCircle2,
+  Lock,
+  ArrowRight,
 } from 'lucide-react';
 import kalanjiyamLogo from '@/assets/kalanjiyam-logo.svg';
+import { Stepper } from './Stepper';
+import { EligibleAdvancesSelector } from './EligibleAdvancesSelector';
+import { ActivatedAdvancesList } from './ActivatedAdvancesList';
 import { getActiveFlow, hrmsEntryRoute } from '../flows/hrmsFlows';
+import { useLanguage } from '../hooks/useLanguage';
+import {
+  KYC_STEPS,
+  KYC_TOTAL_STEPS,
+  kycPercent,
+  kycStatusOf,
+  useSalaryAdvanceState,
+} from '../state/salaryAdvance';
 
-type TabId = 'apps' | 'advance';
+type TabId = 'salary-advance' | 'kyc';
 
-interface GridItem {
+interface AdvanceType {
   id: string;
-  title: string;
   icon: any;
-  isNew?: boolean;
-  onClick?: () => void;
+  titleEn: string;
+  titleTa: string;
+  descEn: string;
+  descTa: string;
 }
+
+const ADVANCE_TYPES: AdvanceType[] = [
+  { id: 'festival', icon: PartyPopper, titleEn: 'Festival Advance', titleTa: 'பண்டிகை முன்பணம்', descEn: 'For Pongal, Deepavali & more', descTa: 'பொங்கல், தீபாவளி மற்றும் பலவற்றிற்கு' },
+  { id: 'long-term', icon: Clock, titleEn: 'Long Term Advance', titleTa: 'நீண்ட கால முன்பணம்', descEn: 'Repay over a longer tenure', descTa: 'நீண்ட காலத்தில் திருப்பிச் செலுத்தலாம்' },
+  { id: 'short-term', icon: IndianRupee, titleEn: 'Short Term Advance', titleTa: 'குறுகிய கால முன்பணம்', descEn: 'Quick, short-tenure support', descTa: 'விரைவான, குறுகிய கால உதவி' },
+  { id: 'pay-advance', icon: PiggyBank, titleEn: 'Pay Advance', titleTa: 'சம்பள முன்பணம்', descEn: 'Advance against your salary', descTa: 'உங்கள் சம்பளத்திற்கு எதிரான முன்பணம்' },
+];
 
 export function HomePage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabId>('advance');
+  const [language] = useLanguage();
+  const state = useSalaryAdvanceState();
+  const [activeTab, setActiveTab] = useState<TabId>('salary-advance');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
+  const isTa = language === 'Tamil';
+  const status = kycStatusOf(state);
+  const percent = kycPercent(state);
+  const kycDone = status === 'complete';
+  const activated = state.advanceActivated;
+
+  const t = {
+    tabSalary: isTa ? 'சம்பள முன்பணம்' : 'Salary Advance',
+    tabKyc: isTa ? 'KYC நிலை' : 'KYC Status',
+    quote: 'கல்வி தரும் நனிநல்ல கற்றார்முன் சொல்லா திருக்கப் பெறின்.',
+
+    upiTitle: isTa ? 'யூபிஐ மூலம் முன்பணம்' : 'Advances on UPI',
+    upiNew: isTa ? 'புதியது' : 'New',
+    upiDesc: isTa ? 'உங்கள் UPI ஐடிக்கு உடனடி முன்பணம்' : 'Instant advance credited to your UPI ID',
+    whatFor: isTa ? 'எதற்காக முன்பணம் பெறலாம்?' : 'What can you take an advance for?',
+
+    // Locked banner (KYC not complete) on the Salary Advance tab
+    lockedTitle: isTa ? 'சம்பள முன்பணத்தைத் திறக்க KYC முடிக்கவும்' : 'Complete KYC to unlock salary advances',
+    lockedNotStarted: isTa
+      ? 'உங்கள் சம்பள முன்பணத்தைச் செயல்படுத்த சரிபார்ப்பை முடிக்கவும்.'
+      : 'Finish verification to activate your salary advance.',
+    lockedInProgress: isTa
+      ? `உங்கள் KYC ${percent}% முடிந்துள்ளது. முன்பணத்தைச் செயல்படுத்த முடிக்கவும்.`
+      : `You've completed ${percent}% of your KYC. Finish it to activate your salary advance.`,
+    startKyc: isTa ? 'KYC தொடங்கவும்' : 'Start KYC',
+    continueKyc: isTa ? 'KYC தொடரவும்' : 'Continue KYC',
+
+    // KYC complete, not activated
+    kycCompleteTitle: isTa ? 'உங்கள் KYC முடிந்தது!' : 'Your KYC is complete!',
+    kycCompleteBody: isTa
+      ? 'இப்போது உங்கள் சம்பள முன்பணத்தைச் செயல்படுத்தலாம்.'
+      : 'You can now activate your salary advance.',
+    activateBtn: isTa ? 'சம்பள முன்பணங்களைக் காண்க' : 'View salary advances',
+
+    // Activated
+    activatedTitle: isTa ? 'உங்கள் சம்பள முன்பணம் செயலில் உள்ளது' : 'Your salary advance is active',
+    activatedBody: isTa
+      ? 'உங்கள் முன்பணங்களை எந்த UPI பயன்பாட்டிலும் பயன்படுத்தலாம்.'
+      : 'Use your advances across any UPI app.',
+    viewAdvances: isTa ? 'எனது முன்பணங்களைக் காண்க' : 'View my advances',
+    activeCount: (n: number) => (isTa ? `${n} முன்பணம் செயலில்` : `${n} advance${n === 1 ? '' : 's'} active`),
+    totalAvailable: isTa ? 'மொத்தம் கிடைக்கும்' : 'Total available',
+
+    // Complete KYC tab
+    kycHeader: isTa ? 'உங்கள் KYC முடிக்கவும்' : 'Complete your KYC',
+    kycIntroNotStarted: isTa
+      ? 'உங்கள் சம்பள முன்பணத்தைச் செயல்படுத்த இந்தப் படிகளை முடிக்கவும்.'
+      : 'Complete these steps to activate your salary advance.',
+    kycIntroInProgress: isTa
+      ? `நீங்கள் ${percent}% முடித்துவிட்டீர்கள். சம்பள முன்பணத்தைச் செயல்படுத்த KYC முடிக்கவும்.`
+      : `You are ${percent}% complete. Finish KYC to activate your salary advance.`,
+    kycCompleteBanner: isTa
+      ? 'உங்கள் KYC முடிந்தது. உங்கள் சம்பள முன்பணத்தைச் செயல்படுத்தவும்.'
+      : 'Your KYC is complete. Activate your salary advance.',
+    stepDone: isTa ? 'முடிந்தது' : 'Done',
+    stepInProgress: isTa ? 'நடைபெறுகிறது' : 'In progress',
+    stepPending: isTa ? 'நிலுவையில்' : 'Pending',
+    progressLabel: isTa ? 'KYC முன்னேற்றம்' : 'KYC progress',
+  };
 
   const toggleFavorite = (id: string) => {
     setFavorites((prev) => {
@@ -41,25 +122,27 @@ export function HomePage() {
     });
   };
 
-  // Advance types available under the "Advances on UPI" feature
-  const advanceTypes: { id: string; title: string; description: string; icon: any }[] = [
-    { id: 'festival', title: 'Festival Advance', description: 'For Pongal, Deepavali & more', icon: PartyPopper },
-    { id: 'long-term', title: 'Long Term Advance', description: 'Repay over a longer tenure', icon: Clock },
-    { id: 'short-term', title: 'Short Term Advance', description: 'Quick, short-tenure support', icon: IndianRupee },
-    { id: 'pay-advance', title: 'Pay Advance', description: 'Advance against your salary', icon: PiggyBank },
-  ];
+  const flowEntryRoute = () => hrmsEntryRoute(getActiveFlow()) ?? '/advances-upi';
 
-  const appItems: GridItem[] = [
-    { id: 'pay-slips', title: 'Pay Slips', icon: FileText },
-    { id: 'gpf', title: 'GPF Balance', icon: BarChart3 },
-    { id: 'insurance', title: 'Group Insurance', icon: Umbrella },
-    { id: 'reimbursements', title: 'Reimbursements', icon: RefreshCcw },
-  ];
+  /** Where an advance card / the UPI card leads, given the current state. */
+  const advanceActionRoute = () => {
+    if (activated) return '/credit-line-dashboard';
+    if (kycDone) return '/sanctioned-offers';
+    return flowEntryRoute();
+  };
 
   const tabs: { id: TabId; label: string }[] = [
-    { id: 'apps', label: 'My Apps' },
-    { id: 'advance', label: 'Advance' },
+    { id: 'salary-advance', label: t.tabSalary },
+    { id: 'kyc', label: t.tabKyc },
   ];
+
+  const onTabKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const idx = tabs.findIndex((tab) => tab.id === activeTab);
+    const nextIdx = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+    setActiveTab(tabs[nextIdx].id);
+  };
 
   return (
     <div className="min-h-screen bg-[#f9f9ff] pb-24 relative overflow-hidden">
@@ -108,14 +191,24 @@ export function HomePage() {
 
       {/* Tabs */}
       <div className="fixed top-[68px] left-0 w-full z-40 bg-[#f9f9ff]/95 backdrop-blur-sm border-b border-gray-100">
-        <div className="max-w-lg mx-auto flex items-center gap-7 px-6">
+        <div
+          role="tablist"
+          aria-label={isTa ? 'சம்பள முன்பணம் மற்றும் KYC' : 'Salary advance and KYC'}
+          onKeyDown={onTabKeyDown}
+          className="max-w-lg mx-auto flex items-center gap-6 px-6"
+        >
           {tabs.map((tab) => {
             const active = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                role="tab"
+                id={`tab-${tab.id}`}
+                aria-selected={active}
+                aria-controls={`panel-${tab.id}`}
+                tabIndex={active ? 0 : -1}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative py-3 text-sm font-bold uppercase tracking-wide transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] ${
+                className={`relative py-3 text-[13px] font-bold uppercase tracking-wide transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D] ${
                   active ? 'text-[#315C9D]' : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
@@ -131,92 +224,231 @@ export function HomePage() {
 
       {/* Main Content */}
       <main className="pt-[124px] px-6 max-w-lg mx-auto relative">
-        {/* Quote */}
-        <div className="mb-8 text-center px-2">
-          <p className="text-[15px] text-gray-600 font-semibold italic leading-relaxed">
-            'கல்வி தரும் நனிநல்ல கற்றார்முன் சொல்லா திருக்கப் பெறின்.'
-          </p>
-        </div>
+        <h1 className="sr-only">{activeTab === 'salary-advance' ? t.tabSalary : t.tabKyc}</h1>
 
-        {activeTab === 'advance' ? (
-          <>
+        {/* Quote — hidden when the Salary Advance tab shows the offers/activated
+            screens, which carry their own heading. */}
+        {!(activeTab === 'salary-advance' && (kycDone || activated)) && (
+          <div className="mb-8 text-center px-2">
+            <p className="text-[15px] text-gray-600 font-semibold italic leading-relaxed">
+              '{t.quote}'
+            </p>
+          </div>
+        )}
+
+        {/* ── Salary Advance tab ─────────────────────────────────────────── */}
+        {activeTab === 'salary-advance' && (
+          <div id="panel-salary-advance" role="tabpanel" aria-labelledby="tab-salary-advance" tabIndex={0} className="focus-visible:outline-none">
+            {activated ? (
+              <ActivatedAdvancesList />
+            ) : kycDone ? (
+              <EligibleAdvancesSelector embedded />
+            ) : (
+              <>
+                {renderLockedBanner()}
+
             {/* Main feature — Advances on UPI */}
             <button
-              onClick={() => navigate(hrmsEntryRoute(getActiveFlow()) ?? '/advances-upi')}
+              onClick={() => navigate(advanceActionRoute())}
               className="relative w-full bg-[#315C9D] text-white rounded-2xl px-5 py-4 flex items-center gap-4 mb-6 active:scale-[0.99] transition-transform text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
             >
               <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-                <Wallet className="w-6 h-6 text-white" />
+                <Wallet className="w-6 h-6 text-white" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <h3 className="text-sm font-bold leading-tight">Advances on UPI</h3>
-                  <span className="text-[9px] font-bold uppercase tracking-wide bg-white/20 px-1.5 py-0.5 rounded-full">New</span>
+                  <h3 className="text-sm font-bold leading-tight">{t.upiTitle}</h3>
+                  <span className="text-[9px] font-bold uppercase tracking-wide bg-white/20 px-1.5 py-0.5 rounded-full">{t.upiNew}</span>
                 </div>
-                <p className="text-xs text-white/70 leading-snug">Instant advance credited to your UPI ID</p>
+                <p className="text-xs text-white/70 leading-snug">{t.upiDesc}</p>
               </div>
-              <ChevronRight className="w-5 h-5 text-white/50 shrink-0" strokeWidth={2.5} />
+              <ChevronRight className="w-5 h-5 text-white/50 shrink-0" strokeWidth={2.5} aria-hidden="true" />
             </button>
 
             {/* Advance types list */}
-            <h2 className="text-sm font-bold text-[#111827] mb-3">What can you take an advance for?</h2>
+            <h2 className="text-sm font-bold text-[#111827] mb-3">{t.whatFor}</h2>
             <div className="space-y-2.5">
-              {advanceTypes.map((item) => {
+              {ADVANCE_TYPES.map((item) => {
                 const Icon = item.icon;
                 const isFav = favorites.has(item.id);
+                const title = isTa ? item.titleTa : item.titleEn;
+                const desc = isTa ? item.descTa : item.descEn;
                 return (
                   <div key={item.id} className="relative">
                     <button
-                      onClick={() => navigate(hrmsEntryRoute(getActiveFlow()) ?? '/advances-upi')}
+                      onClick={() => navigate(advanceActionRoute())}
                       className="w-full flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3 pr-14 shadow-[0_1px_6px_rgba(0,0,0,0.04)] active:scale-[0.99] transition-transform text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
                     >
                       <div className="w-11 h-11 rounded-xl bg-[#315C9D]/10 flex items-center justify-center shrink-0">
-                        <Icon className="w-5 h-5 text-[#315C9D]" strokeWidth={2} />
+                        <Icon className="w-5 h-5 text-[#315C9D]" strokeWidth={2} aria-hidden="true" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-semibold text-[#111827] leading-tight">{item.title}</h4>
-                        <p className="text-[11px] text-gray-500 leading-snug mt-0.5">{item.description}</p>
+                        <h4 className="text-sm font-semibold text-[#111827] leading-tight">{title}</h4>
+                        <p className="text-[11px] text-gray-500 leading-snug mt-0.5">{desc}</p>
                       </div>
                     </button>
                     <button
                       onClick={() => toggleFavorite(item.id)}
-                      aria-label={isFav ? `Remove ${item.title} from favourites` : `Add ${item.title} to favourites`}
+                      aria-label={isFav ? `Remove ${title} from favourites` : `Add ${title} to favourites`}
                       aria-pressed={isFav}
                       className="absolute top-1/2 -translate-y-1/2 right-3 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
                     >
                       <Heart
                         className={`w-4 h-4 transition-colors ${isFav ? 'fill-[#315C9D] text-[#315C9D]' : 'text-gray-300'}`}
                         strokeWidth={2}
+                        aria-hidden="true"
                       />
                     </button>
                   </div>
                 );
               })}
             </div>
-          </>
-        ) : (
-          /* My Apps — service tiles */
-          <section className="grid grid-cols-2 gap-4">
-            {appItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={item.onClick}
-                  className="w-full aspect-square bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center text-center px-4 active:scale-[0.98] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
-                >
-                  <div className="w-16 h-16 rounded-full bg-[#315C9D]/10 flex items-center justify-center mb-3">
-                    <Icon className="w-7 h-7 text-[#315C9D]" strokeWidth={1.75} />
-                  </div>
-                  <h3 className="text-[12px] font-bold text-[#111827] leading-tight uppercase tracking-wide">
-                    {item.title}
-                  </h3>
-                </button>
-              );
-            })}
-          </section>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Complete KYC tab ───────────────────────────────────────────── */}
+        {activeTab === 'kyc' && (
+          <div id="panel-kyc" role="tabpanel" aria-labelledby="tab-kyc" tabIndex={0} className="focus-visible:outline-none">
+            {kycDone ? renderKycCompleteBanner() : renderKycChecklist()}
+          </div>
         )}
       </main>
     </div>
   );
+
+  // ── Sub-renders ─────────────────────────────────────────────────────────
+
+  /** Locked banner on the Salary Advance tab — progress + a CTA into the flow. */
+  function renderLockedBanner() {
+    const notStarted = status === 'not-started';
+    return (
+      <section className="mb-6 rounded-2xl border border-[#315C9D]/15 bg-white p-5 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-11 h-11 rounded-xl bg-[#315C9D]/10 flex items-center justify-center shrink-0">
+            <Lock className="w-5 h-5 text-[#315C9D]" strokeWidth={2} aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-[#111827] leading-tight">{t.lockedTitle}</h2>
+            <p className="text-[12px] text-[#6b7280] leading-relaxed mt-1">
+              {notStarted ? t.lockedNotStarted : t.lockedInProgress}
+            </p>
+          </div>
+        </div>
+
+        {!notStarted && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-[#6b7280] mb-1.5">
+              <span>{t.progressLabel}</span>
+              <span className="text-[#315C9D]">{percent}%</span>
+            </div>
+            {renderProgressBar(percent)}
+          </div>
+        )}
+
+        <button
+          onClick={() => navigate(flowEntryRoute())}
+          className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.99] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+        >
+          {notStarted ? t.startKyc : t.continueKyc}
+          <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
+        </button>
+      </section>
+    );
+  }
+
+  /** "KYC complete" banner on the Complete KYC tab — sends the user to the
+   *  Salary Advance tab, where the eligible advances are now selected inline. */
+  function renderKycCompleteBanner() {
+    return (
+      <section className="mb-6 rounded-2xl border border-[#2da94f]/25 bg-[#eaf7ef] p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-11 h-11 rounded-full bg-[#2da94f]/15 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-6 h-6 text-[#2da94f]" strokeWidth={2} aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-[#111827] leading-tight">{t.kycCompleteTitle}</h2>
+            <p className="text-[12px] text-[#4b5563] leading-relaxed mt-1">{t.kycCompleteBody}</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setActiveTab('salary-advance')}
+          className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.99] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+        >
+          {t.activateBtn}
+          <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
+        </button>
+      </section>
+    );
+  }
+
+  /** The KYC step checklist (not started / in progress) on the Complete KYC tab. */
+  function renderKycChecklist() {
+    const notStarted = status === 'not-started';
+    return (
+      <>
+        <section className="mb-6 rounded-2xl border border-[#315C9D]/15 bg-white p-5 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-11 h-11 rounded-xl bg-[#315C9D]/10 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5 text-[#315C9D]" strokeWidth={2} aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-[#111827] leading-tight">{t.kycHeader}</h2>
+              <p className="text-[12px] text-[#6b7280] leading-relaxed mt-1">
+                {notStarted ? t.kycIntroNotStarted : t.kycIntroInProgress}
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-1">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-[#6b7280] mb-1.5">
+              <span>{t.progressLabel}</span>
+              <span className="text-[#315C9D]">{percent}%</span>
+            </div>
+            {renderProgressBar(percent)}
+          </div>
+        </section>
+
+        {/* Step checklist — vertical progress stepper */}
+        <div className="mb-6">
+          <Stepper
+            steps={KYC_STEPS.map((step) => ({
+              id: step.id,
+              title: isTa ? step.labelTa : step.labelEn,
+              description: isTa ? step.descTa : step.descEn,
+            }))}
+            completedCount={state.completedSteps}
+            labels={{ done: t.stepDone, inProgress: t.stepInProgress, pending: t.stepPending }}
+          />
+        </div>
+
+        <button
+          onClick={() => navigate(flowEntryRoute())}
+          className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.99] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+        >
+          {notStarted ? t.startKyc : t.continueKyc}
+          <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
+        </button>
+      </>
+    );
+  }
+
+  function renderProgressBar(value: number) {
+    return (
+      <div
+        className="w-full h-2 bg-[#315C9D]/10 rounded-full overflow-hidden"
+        role="progressbar"
+        aria-valuenow={value}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${t.progressLabel} ${value}%`}
+      >
+        <div
+          className="h-full bg-[#315C9D] rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
+          style={{ width: `${value}%` }}
+        />
+      </div>
+    );
+  }
 }

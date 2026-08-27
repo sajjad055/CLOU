@@ -7,6 +7,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
 import { useLanguage } from '../hooks/useLanguage';
+import { markAdvanceActivated } from '../state/salaryAdvance';
 import successLottie from '@/assets/success.lottie';
 import festivalAdvanceImg from '@/assets/festival-vectorized.svg';
 import gadgetAdvanceImg from '@/assets/gadget-vectorized.svg';
@@ -90,10 +91,12 @@ export function CreditLineActivatedPage() {
       accountNumber: `${creditLine.accountPrefix}${Math.floor(Math.random() * 10000000000)}`
     }));
 
-  // Save activated credit lines to localStorage for PhonePe mock
+  // Save activated credit lines to localStorage for PhonePe mock, and flip the
+  // home screen into its "advance activated" state.
   useEffect(() => {
     if (creditLinesWithAccounts.length > 0) {
       localStorage.setItem('activatedCreditLines', JSON.stringify(creditLinesWithAccounts));
+      markAdvanceActivated();
     }
   }, [creditLinesWithAccounts]);
 

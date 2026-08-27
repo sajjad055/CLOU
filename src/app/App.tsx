@@ -1,9 +1,10 @@
 import { RouterProvider } from 'react-router';
 import { router } from './routes';
 
-// Default journey for first-time visitors (e.g. the deployed Netlify link).
+// Default journey for first-time visitors (e.g. the deployed link).
 // Switching flows from Dev Preview overwrites this value.
-const DEFAULT_FLOW = 'ntb-no-ckyc';
+// Set to the "HRMS PAN Present, NTB" flow — the second entry in Dev Preview.
+const DEFAULT_FLOW = 'hrms-pan-ntb';
 
 if (typeof window !== 'undefined' && !localStorage.getItem('activeFlow')) {
   localStorage.setItem('activeFlow', DEFAULT_FLOW);

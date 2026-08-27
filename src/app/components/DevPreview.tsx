@@ -4,6 +4,33 @@ import { Code2, X, Home, FileText, Phone, Lock, CheckCircle, Loader2, CreditCard
 import { motion, AnimatePresence } from 'motion/react';
 import { HRMS_FLOW_IDS, HRMS_FLOWS } from '../flows/hrmsFlows';
 import { resetJourney } from '../flows/hrmsJourney';
+import {
+  KYC_TOTAL_STEPS,
+  markAdvanceActivated,
+  markKycComplete,
+  resetSalaryAdvance,
+  setCompletedSteps,
+} from '../state/salaryAdvance';
+
+/** Demo credit lines written when jumping the home screen to its "activated"
+ *  state, so the Salary Advance summary and the dashboard both have data. */
+const DEMO_ACTIVATED_CREDIT_LINES = [
+  { id: 'festival', nameEn: 'Festival Advance', nameTa: 'பண்டிகை முன்பணம்', amount: '₹50,000', accountPrefix: 'festival', accountNumber: 'festival1234567890' },
+  { id: 'gadget', nameEn: 'Gadget Purchase Advance', nameTa: 'கேஜெட் கொள்முதல் முன்பணம்', amount: '₹75,000', accountPrefix: 'gadget', accountNumber: 'gadget9876543210' },
+];
+
+type HomeStateKind = 'not-started' | 'in-progress' | 'kyc-complete' | 'activated';
+
+/** Reset every persisted bit of home-screen / journey state to first-run. */
+function clearHomeState() {
+  resetSalaryAdvance();
+  try {
+    localStorage.removeItem('activatedCreditLines');
+    localStorage.removeItem('cifNumber');
+  } catch {
+    // Storage unavailable — nothing to clear.
+  }
+}
 
 /**
  * Every flow-entry path in the panel, mapped to the `activeFlow` value it sets.
@@ -104,6 +131,8 @@ export function DevPreview() {
       try {
         localStorage.setItem('activeFlow', flowId);
         resetJourney();
+        // A fresh flow starts a fresh home screen: KYC not started, no advance.
+        clearHomeState();
       } catch {
         // Storage unavailable: keep the panel open, announce it, navigate
         // nowhere, and leave the previously selected flow in place.
@@ -130,6 +159,32 @@ export function DevPreview() {
     }
     setIsOpen(false);
   };
+
+  // Jump the home screen straight to one of its four states, then land on it.
+  const handleHomeState = (kind: HomeStateKind) => {
+    clearHomeState();
+    if (kind === 'in-progress') {
+      setCompletedSteps(Math.max(1, Math.round(KYC_TOTAL_STEPS / 2)));
+    } else if (kind === 'kyc-complete') {
+      markKycComplete();
+    } else if (kind === 'activated') {
+      try {
+        localStorage.setItem('activatedCreditLines', JSON.stringify(DEMO_ACTIVATED_CREDIT_LINES));
+      } catch {
+        // Storage unavailable — the state flag below still drives the UI.
+      }
+      markAdvanceActivated();
+    }
+    navigate('/');
+    setIsOpen(false);
+  };
+
+  const homeStates: { kind: HomeStateKind; label: string }[] = [
+    { kind: 'not-started', label: 'KYC not started' },
+    { kind: 'in-progress', label: 'KYC 50%' },
+    { kind: 'kyc-complete', label: 'KYC complete' },
+    { kind: 'activated', label: 'Advance activated' },
+  ];
 
   // With the toggle hidden `showAll` can never be set, so the list stays capped
   // at the five HRMS journeys.
@@ -204,6 +259,22 @@ export function DevPreview() {
                   </p>
                 </div>
               )}
+
+              {/* Home screen state jumps */}
+              <div className="px-4 pt-4">
+                <h3 className="text-xs font-black uppercase tracking-wide text-gray-500 mb-2">Home screen state</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {homeStates.map((s) => (
+                    <button
+                      key={s.kind}
+                      onClick={() => handleHomeState(s.kind)}
+                      className="h-11 rounded-xl border-2 border-gray-200 bg-white text-[13px] font-bold text-gray-700 transition-all hover:border-purple-300 hover:text-purple-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Routes List */}
               <div className="p-4 space-y-2">
