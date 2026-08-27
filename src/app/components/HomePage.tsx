@@ -78,8 +78,8 @@ export function HomePage() {
     lockedInProgress: isTa
       ? `உங்கள் KYC ${percent}% முடிந்துள்ளது. முன்பணத்தைச் செயல்படுத்த முடிக்கவும்.`
       : `You've completed ${percent}% of your KYC. Finish it to activate your salary advance.`,
-    startKyc: isTa ? 'KYC தொடங்கவும்' : 'Start KYC',
-    continueKyc: isTa ? 'KYC தொடரவும்' : 'Continue KYC',
+    startKyc: isTa ? 'தொடங்குங்கள்' : 'Get started',
+    continueKyc: isTa ? 'தொடரவும்' : 'Continue',
 
     // KYC complete, not activated
     kycCompleteTitle: isTa ? 'உங்கள் KYC முடிந்தது!' : 'Your KYC is complete!',
@@ -247,22 +247,23 @@ export function HomePage() {
               <>
                 {renderLockedBanner()}
 
-            {/* Main feature — Advances on UPI */}
+            {/* Main feature — Advances on UPI. De-emphasised (white, not blue)
+                so it doesn't compete with the primary KYC module above it. */}
             <button
               onClick={() => navigate(advanceActionRoute())}
-              className="relative w-full bg-[#315C9D] text-white rounded-2xl px-5 py-4 flex items-center gap-4 mb-6 active:scale-[0.99] transition-transform text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+              className="relative w-full bg-white border border-gray-100 text-[#111827] rounded-2xl px-5 py-4 flex items-center gap-4 mb-6 shadow-[0_1px_6px_rgba(0,0,0,0.04)] active:scale-[0.99] transition-transform text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
             >
-              <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-                <Wallet className="w-6 h-6 text-white" aria-hidden="true" />
+              <div className="w-12 h-12 rounded-xl bg-[#315C9D]/10 flex items-center justify-center shrink-0">
+                <Wallet className="w-6 h-6 text-[#315C9D]" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <h3 className="text-sm font-bold leading-tight">{t.upiTitle}</h3>
-                  <span className="text-[9px] font-bold uppercase tracking-wide bg-white/20 px-1.5 py-0.5 rounded-full">{t.upiNew}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wide bg-[#315C9D]/10 text-[#315C9D] px-1.5 py-0.5 rounded-full">{t.upiNew}</span>
                 </div>
-                <p className="text-xs text-white/70 leading-snug">{t.upiDesc}</p>
+                <p className="text-xs text-gray-500 leading-snug">{t.upiDesc}</p>
               </div>
-              <ChevronRight className="w-5 h-5 text-white/50 shrink-0" strokeWidth={2.5} aria-hidden="true" />
+              <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" strokeWidth={2.5} aria-hidden="true" />
             </button>
 
             {/* Advance types list */}
@@ -401,13 +402,23 @@ export function HomePage() {
             </div>
           </div>
 
-          <div className="mb-1">
+          <div className="mb-4">
             <div className="flex items-center justify-between text-[11px] font-semibold text-[#6b7280] mb-1.5">
               <span>{t.progressLabel}</span>
               <span className="text-[#315C9D]">{percent}%</span>
             </div>
             {renderProgressBar(percent)}
           </div>
+
+          {/* CTA lives inside the module so it stays above the fold, before the
+              step list. */}
+          <button
+            onClick={() => navigate(flowEntryRoute())}
+            className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.99] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+          >
+            {notStarted ? t.startKyc : t.continueKyc}
+            <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
+          </button>
         </section>
 
         {/* Step checklist — vertical progress stepper */}
@@ -422,14 +433,6 @@ export function HomePage() {
             labels={{ done: t.stepDone, inProgress: t.stepInProgress, pending: t.stepPending }}
           />
         </div>
-
-        <button
-          onClick={() => navigate(flowEntryRoute())}
-          className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.99] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
-        >
-          {notStarted ? t.startKyc : t.continueKyc}
-          <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
-        </button>
       </>
     );
   }

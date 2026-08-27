@@ -1,9 +1,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { CheckCircle2, Info, Copy, Check, User, Hash, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Info, Copy, Check, User, Hash } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { getAdvanceOffer } from '../data/advancesCatalog';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+
+// UPI app logos, shared with the UPI connection screen.
+import paytmImg from '../../imports/image-16.png';
+import googlePayImg from '../../imports/image-17.png';
+import phonePeImg from '../../imports/image-15.png';
+
+const UPI_APPS = [
+  { name: 'PhonePe', logo: phonePeImg },
+  { name: 'Paytm', logo: paytmImg },
+  { name: 'Google Pay', logo: googlePayImg },
+];
 
 interface StoredCreditLine {
   id: string;
@@ -30,6 +42,9 @@ function readActivated(): StoredCreditLine[] {
  * number, and where each advance can be spent. Mirrors the activation success
  * screen, but embedded in the home Salary Advance tab as the "you're active"
  * view. Reads the credit lines the activation screen persisted.
+ *
+ * The status header and the primary "Connect to UPI apps" action are combined
+ * into a single module at the top, so the main action stays above the fold.
  */
 export function ActivatedAdvancesList() {
   const navigate = useNavigate();
@@ -55,7 +70,7 @@ export function ActivatedAdvancesList() {
     amount: isTa ? 'கடன் வரம்பு' : 'Credit Limit',
     accountLabel: isTa ? 'கடன் கணக்கு எண்' : 'Loan Account Number',
     usageTitle: isTa ? 'இதை எங்கு பயன்படுத்தலாம்' : 'Where you can use this',
-    connectBtn: isTa ? 'உங்கள் UPI பயன்பாடுகளுடன் இணைக்கவும்' : 'Connect to your UPI apps',
+    connectBtn: isTa ? 'UPI பயன்பாடுகளுடன் இணைக்கவும்' : 'Connect to UPI apps',
     dashboardBtn: isTa ? 'முழு டாஷ்போர்டைக் காண்க' : 'View full dashboard',
   };
 
@@ -70,17 +85,44 @@ export function ActivatedAdvancesList() {
   };
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-start gap-3 mb-5">
-        <div className="w-11 h-11 rounded-full bg-[#2da94f]/15 flex items-center justify-center shrink-0">
-          <CheckCircle2 className="w-6 h-6 text-[#2da94f]" strokeWidth={2} aria-hidden="true" />
+    <div className="pt-2">
+      {/* Status + primary action — one module, kept above the fold */}
+      <section className="mb-5 rounded-2xl border border-[#2da94f]/25 bg-[#eaf7ef] p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-11 h-11 rounded-full bg-[#2da94f]/15 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-6 h-6 text-[#2da94f]" strokeWidth={2} aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-base font-black text-[#111827] leading-tight">{t.title}</h2>
+            <p className="text-[12px] text-[#4b5563] leading-relaxed mt-1">{t.subtitle}</p>
+          </div>
         </div>
-        <div className="min-w-0">
-          <h2 className="text-base font-black text-[#111827] leading-tight">{t.title}</h2>
-          <p className="text-[12px] text-[#6b7280] leading-relaxed mt-1">{t.subtitle}</p>
-        </div>
-      </div>
+
+        <button
+          onClick={() => navigate('/upi-connection')}
+          className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center gap-3 active:scale-[0.99] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+        >
+          <span className="flex items-center -space-x-2" aria-hidden="true">
+            {UPI_APPS.map((app, index) => (
+              <span
+                key={app.name}
+                className="w-6 h-6 rounded-full bg-white ring-2 ring-[#315C9D] flex items-center justify-center overflow-hidden p-0.5"
+                style={{ zIndex: UPI_APPS.length - index }}
+              >
+                <ImageWithFallback src={app.logo} alt="" className="w-full h-full object-contain" />
+              </span>
+            ))}
+          </span>
+          {t.connectBtn}
+        </button>
+
+        <button
+          onClick={() => navigate('/credit-line-dashboard')}
+          className="w-full h-11 mt-2 rounded-lg bg-transparent text-[#315C9D] font-semibold text-sm hover:bg-[#315C9D]/5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+        >
+          {t.dashboardBtn}
+        </button>
+      </section>
 
       {/* Customer identity — name + CIF */}
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden mb-5">
@@ -107,7 +149,7 @@ export function ActivatedAdvancesList() {
       </div>
 
       {/* Activated advances */}
-      <div className="space-y-6 mb-6">
+      <div className="space-y-6">
         {activated.map((line, index) => {
           const offer = getAdvanceOffer(line.id);
           const name = isTa ? line.nameTa ?? offer?.nameTa ?? '' : line.nameEn ?? offer?.nameEn ?? '';
@@ -179,23 +221,6 @@ export function ActivatedAdvancesList() {
             </motion.div>
           );
         })}
-      </div>
-
-      {/* Actions */}
-      <div className="space-y-2.5">
-        <button
-          onClick={() => navigate('/upi-connection')}
-          className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.99] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
-        >
-          {t.connectBtn}
-          <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
-        </button>
-        <button
-          onClick={() => navigate('/credit-line-dashboard')}
-          className="w-full h-12 rounded-lg bg-transparent text-[#315C9D] font-semibold text-base hover:bg-[#315C9D]/5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
-        >
-          {t.dashboardBtn}
-        </button>
       </div>
     </div>
   );
