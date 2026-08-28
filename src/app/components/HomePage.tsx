@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import kalanjiyamLogo from '@/assets/kalanjiyam-logo.svg';
 import { Stepper } from './Stepper';
-import { EligibleAdvancesSelector } from './EligibleAdvancesSelector';
 import { ActivatedAdvancesDashboard } from './ActivatedAdvancesDashboard';
 import { getActiveFlow, hrmsEntryRoute, isHrmsFlow } from '../flows/hrmsFlows';
 import { resetJourney } from '../flows/hrmsJourney';
@@ -82,12 +81,18 @@ export function HomePage() {
     startKyc: isTa ? 'தொடங்குங்கள்' : 'Get started',
     continueKyc: isTa ? 'தொடரவும்' : 'Continue',
 
+    // KYC done — Salary Advance tab banner (advances not yet activated)
+    kycDoneTitle: isTa ? 'KYC வெற்றிகரமாக முடிந்தது' : 'KYC is successfully done',
+    kycDoneBody: isTa
+      ? '“யூபிஐ மூலம் முன்பணம்” திறந்து உங்கள் சம்பள முன்பணங்களைத் தேர்ந்தெடுத்து செயல்படுத்தவும்.'
+      : 'Open “Advances on UPI” below to choose and activate your salary advances.',
+
     // KYC complete, not activated
     kycCompleteTitle: isTa ? 'உங்கள் KYC முடிந்தது!' : 'Your KYC is complete!',
     kycCompleteBody: isTa
       ? 'இப்போது உங்கள் சம்பள முன்பணத்தைச் செயல்படுத்தலாம்.'
       : 'You can now activate your salary advance.',
-    activateBtn: isTa ? 'சம்பள முன்பணங்களைக் காண்க' : 'View salary advances',
+    activateBtn: isTa ? 'சம்பள முன்பணங்களுக்குச் செல்லவும்' : 'Go to salary advances',
 
     // Activated
     activatedTitle: isTa ? 'உங்கள் சம்பள முன்பணம் செயலில் உள்ளது' : 'Your salary advance is active',
@@ -154,9 +159,14 @@ export function HomePage() {
     navigate(hrmsEntryRoute(flow) ?? '/hrms-details');
   };
 
-  /** The greyed UPI / advance cards only render while KYC is incomplete, so
-   *  tapping them starts (or resumes) the KYC journey. */
+  /** Advances-on-UPI / advance cards: once KYC is done they open the separate
+   *  select-advances page; while KYC is pending they start (or resume) the KYC
+   *  journey. */
   const handleAdvanceClick = () => {
+    if (kycDone) {
+      navigate('/select-advances');
+      return;
+    }
     startKycJourney();
   };
 
@@ -257,7 +267,7 @@ export function HomePage() {
 
         {/* Quote — hidden when the Salary Advance tab shows the offers/activated
             screens, which carry their own heading. */}
-        {!(activeTab === 'salary-advance' && (kycDone || activated)) && (
+        {!(activeTab === 'salary-advance' && activated) && (
           <div className="mb-8 text-center px-2">
             <p className="text-[15px] text-gray-600 font-semibold italic leading-relaxed">
               '{t.quote}'
@@ -270,30 +280,32 @@ export function HomePage() {
           <div id="panel-salary-advance" role="tabpanel" aria-labelledby="tab-salary-advance" tabIndex={0} className="focus-visible:outline-none">
             {activated ? (
               <ActivatedAdvancesDashboard />
-            ) : kycDone ? (
-              <EligibleAdvancesSelector embedded />
             ) : (
               <>
-                {renderLockedBanner()}
+                {kycDone ? renderKycDoneBanner() : renderLockedBanner()}
 
-            {/* Main feature — Advances on UPI. Muted (grey, no blue accent, faded)
-                so it recedes and doesn't compete with the KYC module above.
-                Still tappable. */}
+            {/* Main feature — Advances on UPI. Muted/greyed while KYC is pending;
+                once KYC is done it becomes the active entry to pick and activate
+                advances. */}
             <button
               onClick={handleAdvanceClick}
-              className="relative w-full bg-gray-50 border border-gray-100 text-gray-600 rounded-2xl px-5 py-4 flex items-center gap-4 mb-6 opacity-70 active:scale-[0.99] transition-transform text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+              className={`relative w-full rounded-2xl px-5 py-4 flex items-center gap-4 mb-6 active:scale-[0.99] transition-transform text-left focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                kycDone
+                  ? 'bg-[#315C9D] text-white shadow-[0_6px_18px_rgba(49,92,157,0.35)] focus-visible:outline-white'
+                  : 'bg-gray-50 border border-gray-100 text-gray-600 opacity-70 focus-visible:outline-[#315C9D]'
+              }`}
             >
-              <div className="w-12 h-12 rounded-xl bg-gray-200/70 flex items-center justify-center shrink-0">
-                <Wallet className="w-6 h-6 text-gray-400" aria-hidden="true" />
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${kycDone ? 'bg-white/20' : 'bg-gray-200/70'}`}>
+                <Wallet className={`w-6 h-6 ${kycDone ? 'text-white' : 'text-gray-400'}`} aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <h3 className="text-sm font-bold leading-tight text-gray-700">{t.upiTitle}</h3>
-                  <span className="text-[9px] font-bold uppercase tracking-wide bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full">{t.upiNew}</span>
+                  <h3 className={`text-sm font-bold leading-tight ${kycDone ? 'text-white' : 'text-gray-700'}`}>{t.upiTitle}</h3>
+                  <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${kycDone ? 'bg-white text-[#315C9D]' : 'bg-gray-200 text-gray-500'}`}>{t.upiNew}</span>
                 </div>
-                <p className="text-xs text-gray-500 leading-snug">{t.upiDesc}</p>
+                <p className={`text-xs leading-snug ${kycDone ? 'text-white/80' : 'text-gray-500'}`}>{t.upiDesc}</p>
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" strokeWidth={2.5} aria-hidden="true" />
+              <ChevronRight className={`w-5 h-5 shrink-0 ${kycDone ? 'text-white/70' : 'text-gray-300'}`} strokeWidth={2.5} aria-hidden="true" />
             </button>
 
             {/* Advance types list */}
@@ -385,6 +397,25 @@ export function HomePage() {
           {notStarted ? t.startKyc : t.continueKyc}
           <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
         </button>
+      </section>
+    );
+  }
+
+  /** "KYC is successfully done" banner on the Salary Advance tab, shown above
+   *  the now-active Advances-on-UPI block. Informational — the block itself is
+   *  the action. */
+  function renderKycDoneBanner() {
+    return (
+      <section className="mb-6 rounded-2xl border border-[#2da94f]/25 bg-[#eaf7ef] p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-full bg-[#2da94f]/15 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-6 h-6 text-[#2da94f]" strokeWidth={2} aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-[#111827] leading-tight">{t.kycDoneTitle}</h2>
+            <p className="text-[12px] text-[#4b5563] leading-relaxed mt-1">{t.kycDoneBody}</p>
+          </div>
+        </div>
       </section>
     );
   }

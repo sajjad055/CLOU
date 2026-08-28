@@ -83,7 +83,7 @@ const flowConfigs: Record<string, FlowConfig> = {
   // ── No CKYC number (pan-first): run existing-customer check after review ──
   'ntb-no-ckyc': { ckycFirst: false, next: '/aadhaar-verification', steps: [dedupeSteps.check, dedupeSteps.ntbResult] },
   'ntb-no-ckyc-id': { ckycFirst: false, next: '/aadhaar-verification', steps: [dedupeSteps.check, dedupeSteps.ntbResult] },
-  'etb-no-ckyc': { ckycFirst: false, next: '/sanctioned-offers', steps: [dedupeSteps.check, dedupeSteps.etbResult, dedupeSteps.bre, dedupeSteps.offers] },
+  'etb-no-ckyc': { ckycFirst: false, next: '/sanctioned-offers', steps: [dedupeSteps.check, dedupeSteps.etbResult, dedupeSteps.bre] },
   'etb-no-ckyc-id': { ckycFirst: false, next: '/employee-id-upload', steps: [dedupeSteps.check, dedupeSteps.etbResult] },
 };
 

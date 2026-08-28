@@ -317,9 +317,10 @@ const hrmsPanEtb: HrmsFlowDefinition = {
     dedupeResult: 'etb',
     panSource: 'hrms',
     next: '/sanctioned-offers',
-    // Straight to offers from here, so the eligibility check and offers fetch
-    // run on this screen rather than the offers appearing instantly.
-    steps: [breCheck, offersFetch],
+    // The eligibility check runs on this screen. The salary advances themselves
+    // are not fetched here — they surface on the home screen after the
+    // application is submitted, which may not be instant.
+    steps: [breCheck],
   },
 };
 
@@ -443,7 +444,7 @@ const hrmsNopanEtb: HrmsFlowDefinition = {
     next: '/sanctioned-offers',
     // Straight to offers from here, so the eligibility check and offers fetch
     // run on this screen rather than the offers appearing instantly.
-    steps: [breCheck, offersFetch],
+    steps: [breCheck],
   },
 };
 
@@ -609,7 +610,7 @@ const hrmsNopanEtbNopan: HrmsFlowDefinition = {
     next: '/sanctioned-offers',
     // Straight to offers from here, so the eligibility check and offers fetch
     // run on this screen rather than the offers appearing instantly.
-    steps: [breCheck, offersFetch],
+    steps: [breCheck],
   },
 };
 

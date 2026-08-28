@@ -36,4 +36,12 @@ export default defineConfig(({ command }) => ({
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv', '**/*.lottie'],
+
+  // Dev server: expose on the LAN and accept requests coming through public
+  // tunnels (e.g. *.trycloudflare.com), whose Host header Vite would otherwise
+  // block. Safe for a prototype/demo server.
+  server: {
+    host: true,
+    allowedHosts: true,
+  },
 }))

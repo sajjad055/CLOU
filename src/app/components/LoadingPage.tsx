@@ -14,12 +14,12 @@ export function LoadingPage() {
     English: [
       'Connecting to Tamil Nadu State Government Registry',
       'Fetching your Employee Data',
-      'Reviewing your Sanctioned Loans'
+      'Creating your customer record (CIF)'
     ],
     Tamil: [
       'தமிழ்நாடு அரசு பதிவேட்டுடன் இணைக்கப்படுகிறது',
       'உங்கள் ஊழியர் தரவை பெறுகிறது',
-      'உங்கள் அனுமதிக்கப்பட்ட கடன்களை மதிப்பாய்வு செய்கிறது'
+      'உங்கள் வாடிக்கையாளர் பதிவு (CIF) உருவாக்கப்படுகிறது'
     ]
   };
 

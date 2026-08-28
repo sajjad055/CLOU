@@ -30,13 +30,13 @@ export function ApplicationSuccessPage() {
   const content = {
     English: {
       title: 'Your salary advance application is successful',
-      subtitle: 'Your verification is complete. You can now view and activate your salary advances.',
-      cta: 'View salary advances',
+      subtitle: 'Your KYC verification is complete.',
+      cta: 'Go to home',
     },
     Tamil: {
       title: 'உங்கள் சம்பள முன்பண விண்ணப்பம் வெற்றிகரமானது',
-      subtitle: 'உங்கள் சரிபார்ப்பு முடிந்தது. இப்போது உங்கள் சம்பள முன்பணங்களைக் கண்டு செயல்படுத்தலாம்.',
-      cta: 'சம்பள முன்பணங்களைக் காண்க',
+      subtitle: 'உங்கள் KYC சரிபார்ப்பு முடிந்தது.',
+      cta: 'முகப்புக்குச் செல்லவும்',
     },
   };
 

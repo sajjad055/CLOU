@@ -32,6 +32,7 @@ import { HRMSDetailsPage } from "./components/HRMSDetailsPage";
 import { DedupeOutcomePage } from "./components/DedupeOutcomePage";
 import { PANAadhaarEntryPage } from "./components/PANAadhaarEntryPage";
 import { KycResumePage } from "./components/KycResumePage";
+import { SelectAdvancesPage } from "./components/SelectAdvancesPage";
 import { Layout } from "./components/Layout";
 
 // On GitHub Pages the app is served from "/CLOU/". Vite exposes that as
@@ -176,6 +177,10 @@ export const router = createBrowserRouter([
       {
         path: "kyc-resume",
         Component: KycResumePage,
+      },
+      {
+        path: "select-advances",
+        Component: SelectAdvancesPage,
       },
     ],
   },
