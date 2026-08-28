@@ -6,7 +6,7 @@ import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
 import { useLanguage } from '../hooks/useLanguage';
 
-type VerificationStep = 'aadhaar-input' | 'otp-verification' | 'verifying' | 'verified' | 'confirm-details' | 'updating-records' | 'success';
+type VerificationStep = 'aadhaar-input' | 'otp-verification' | 'verifying' | 'confirm-details';
 
 /* ─── shared CTA button ──────────────────────────────────────────────────── */
 function CTAButton({ onClick, disabled, children }: { onClick?: () => void; disabled?: boolean; children: React.ReactNode }) {
@@ -58,17 +58,8 @@ export function AadhaarOTPPage() {
   }, [step, timer]);
 
   useEffect(() => {
-    if (step === 'verifying') { const t = setTimeout(() => setStep('verified'), 2000); return () => clearTimeout(t); }
+    if (step === 'verifying') { const t = setTimeout(() => setStep('confirm-details'), 2000); return () => clearTimeout(t); }
   }, [step]);
-  useEffect(() => {
-    if (step === 'verified') { const t = setTimeout(() => setStep('confirm-details'), 1500); return () => clearTimeout(t); }
-  }, [step]);
-  useEffect(() => {
-    if (step === 'updating-records') { const t = setTimeout(() => setStep('success'), 2000); return () => clearTimeout(t); }
-  }, [step]);
-  useEffect(() => {
-    if (step === 'success') { const t = setTimeout(() => navigate('/loading'), 1500); return () => clearTimeout(t); }
-  }, [step, navigate]);
 
   const content = {
     English: {
@@ -265,19 +256,6 @@ export function AadhaarOTPPage() {
             </div>
           )}
 
-          {/* ── Verified ── */}
-          {step === 'verified' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 15 }}>
-                <div className="w-32 h-32 rounded-2xl bg-[#2da94f]/10 flex items-center justify-center">
-                  <CheckCircle className="w-16 h-16 text-[#2da94f]" strokeWidth={2} />
-                </div>
-              </motion.div>
-              <motion.p initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}
-                className="text-xl font-semibold text-[#2da94f] mt-6">{t.verifiedTitle}</motion.p>
-            </div>
-          )}
-
           {/* ── Confirm Details ── */}
           {step === 'confirm-details' && (
             <div className="flex flex-col items-center">
@@ -310,7 +288,7 @@ export function AadhaarOTPPage() {
 
               <StickyFooter>
                 <div className="space-y-3">
-                  <CTAButton onClick={() => setStep('updating-records')}>{t.confirmBtn}</CTAButton>
+                  <CTAButton onClick={() => navigate('/sanctioned-offers')}>{t.confirmBtn}</CTAButton>
                   {/* Tertiary: no stroke, no fill. Brand-coloured text carries the
                       affordance, so it reads as secondary to the CTA above without
                       competing with it. */}
@@ -326,33 +304,6 @@ export function AadhaarOTPPage() {
             </div>
           )}
 
-          {/* ── Updating Records ── */}
-          {step === 'updating-records' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.4 }} className="mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-[#ebecef] flex items-center justify-center">
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
-                    <CheckCircle className="w-6 h-6 text-[#315C9D]" strokeWidth={2} />
-                  </motion.div>
-                </div>
-              </motion.div>
-              <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="text-center">
-                <h2 className="text-xl font-semibold text-[#111827] mb-1">{t.updatingRecordsTitle}</h2>
-                <p className="text-sm text-[#6b7280]">{t.updatingRecordsSubtitle}</p>
-              </motion.div>
-            </div>
-          )}
-
-          {/* ── Success ── */}
-          {step === 'success' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 15 }}>
-                <div className="w-32 h-32 rounded-2xl bg-[#2da94f]/10 flex items-center justify-center">
-                  <CheckCircle className="w-16 h-16 text-[#2da94f]" strokeWidth={2} />
-                </div>
-              </motion.div>
-            </div>
-          )}
         </div>
       </main>
 

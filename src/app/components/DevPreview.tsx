@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { Code2, X, Home, FileText, Phone, Lock, CheckCircle, Loader2, CreditCard, Settings, Sparkles, ShieldCheck, Fingerprint, FileCheck, Smartphone, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Code2, X, Home, FileText, Phone, Lock, CheckCircle, CreditCard, Settings, Sparkles, ShieldCheck, Fingerprint, FileCheck, Smartphone, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { HRMS_FLOW_IDS, HRMS_FLOWS } from '../flows/hrmsFlows';
 import { resetJourney } from '../flows/hrmsJourney';
@@ -89,8 +89,6 @@ const routes: PageRoute[] = [
   { path: '/kyc-aadhaar-biometric', name: 'Biometric KYC', icon: Fingerprint, description: 'Facial verification (Full KYC)' },
   { path: '/kyc-ckyc-verification', name: 'CKYC Verify', icon: FileCheck, description: 'PAN details & speed post' },
   { path: '/kyc-aadhaar-otp', name: 'Aadhaar OTP', icon: Smartphone, description: 'Min KYC with limits' },
-  { path: '/success', name: 'Success Splash', icon: CheckCircle, description: 'Success animation' },
-  { path: '/loading', name: 'Loading', icon: Loader2, description: 'Processing screen' },
   { path: '/sanctioned-offers', name: 'KYC Complete', icon: CheckCircle, description: 'KYC verification complete' },
   { path: '/credit-line-processing', name: 'Processing', icon: Settings, description: 'Activation progress' },
   { path: '/credit-line-activated', name: 'Activated', icon: Sparkles, description: 'Success with confetti' },

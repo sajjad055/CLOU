@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { HomePage } from "./components/HomePage";
 import { LandingPage } from "./components/LandingPage";
 import { PhoneInputPage } from "./components/PhoneInputPage";
@@ -20,8 +20,6 @@ import { KYCOptionsPage } from "./components/KYCOptionsPage";
 import { AadhaarBiometricPage } from "./components/AadhaarBiometricPage";
 import { CKYCVerificationPage } from "./components/CKYCVerificationPage";
 import { AadhaarOTPPage } from "./components/AadhaarOTPPage";
-import { SuccessSplashPage } from "./components/SuccessSplashPage";
-import { LoadingPage } from "./components/LoadingPage";
 import { ApplicationSuccessPage } from "./components/ApplicationSuccessPage";
 import { CreditLineProcessingPage } from "./components/CreditLineProcessingPage";
 import { CreditLineActivatedPage } from "./components/CreditLineActivatedPage";
@@ -34,6 +32,12 @@ import { PANAadhaarEntryPage } from "./components/PANAadhaarEntryPage";
 import { KycResumePage } from "./components/KycResumePage";
 import { SelectAdvancesPage } from "./components/SelectAdvancesPage";
 import { Layout } from "./components/Layout";
+
+/** Old intermediate completion URLs now resolve straight to the single KYC
+ * completion screen, including bookmarks and stale browser history entries. */
+function KycCompletionRedirect() {
+  return <Navigate to="/sanctioned-offers" replace />;
+}
 
 // On GitHub Pages the app is served from "/CLOU/". Vite exposes that as
 // BASE_URL; strip the trailing slash for react-router's basename. Locally
@@ -132,11 +136,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "success",
-        Component: SuccessSplashPage,
+        Component: KycCompletionRedirect,
       },
       {
         path: "loading",
-        Component: LoadingPage,
+        Component: KycCompletionRedirect,
       },
       {
         path: "sanctioned-offers",

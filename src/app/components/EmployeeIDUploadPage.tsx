@@ -99,9 +99,7 @@ export function EmployeeIDUploadPage() {
   useEffect(() => {
     if (step !== 'processing') return;
     if (currentProcessingStep >= processingSteps.length) {
-      const flow = localStorage.getItem('activeFlow') || 'ntb-no-ckyc';
-      const dest = (flow === 'etb-no-ckyc-id' || flow === 'etb-no-ckyc' || flow === 'etb-knows-ckyc-id') ? '/sanctioned-offers' : '/loading';
-      const t = setTimeout(() => navigate(dest), 800);
+      const t = setTimeout(() => navigate('/sanctioned-offers'), 800);
       return () => clearTimeout(t);
     }
     const current = processingSteps[currentProcessingStep];
@@ -113,9 +111,7 @@ export function EmployeeIDUploadPage() {
   }, [step, currentProcessingStep, navigate]);
 
   const handleContinue = () => {
-    const flow = localStorage.getItem('activeFlow') || 'ntb-no-ckyc';
-    const dest = (flow === 'etb-no-ckyc-id' || flow === 'etb-no-ckyc' || flow === 'etb-knows-ckyc-id') ? '/sanctioned-offers' : '/loading';
-    navigate(dest);
+    navigate('/sanctioned-offers');
   };
 
   return (

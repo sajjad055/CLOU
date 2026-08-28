@@ -7,14 +7,12 @@ import { StickyFooter } from './StickyFooter';
 import { BottomSheet } from './BottomSheet';
 import { useLanguage } from '../hooks/useLanguage';
 import aadhaarImg from '@/assets/aadhaar.svg';
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import faceScanImg from '@/assets/face-scan.svg';
 import faceRdImg from '@/assets/facerd.svg';
-import successLottie from '@/assets/success.lottie';
 
 const FACE_PLACEHOLDER = 'https://images.unsplash.com/photo-1712425718137-491250cfde88?fit=facearea&facepad=2&w=400&h=460&q=80';
 
-type VerificationStep = 'aadhaar-input' | 'face-verification-ready' | 'blink' | 'scanning' | 'verifying' | 'verified' | 'confirm-details' | 'updating-records' | 'success';
+type VerificationStep = 'aadhaar-input' | 'face-verification-ready' | 'blink' | 'scanning' | 'verifying' | 'confirm-details';
 
 function CTAButton({ onClick, disabled, children }: { onClick?: () => void; disabled?: boolean; children: React.ReactNode }) {
   return (
@@ -59,17 +57,8 @@ export function AadhaarBiometricPage() {
   }, [step]);
 
   useEffect(() => {
-    if (step === 'verifying') { const t = setTimeout(() => setStep('verified'), 2000); return () => clearTimeout(t); }
+    if (step === 'verifying') { const t = setTimeout(() => setStep('confirm-details'), 2000); return () => clearTimeout(t); }
   }, [step]);
-  useEffect(() => {
-    if (step === 'verified') { const t = setTimeout(() => setStep('confirm-details'), 1500); return () => clearTimeout(t); }
-  }, [step]);
-  useEffect(() => {
-    if (step === 'updating-records') { const t = setTimeout(() => setStep('success'), 2000); return () => clearTimeout(t); }
-  }, [step]);
-  useEffect(() => {
-    if (step === 'success') { const t = setTimeout(() => navigate('/loading'), 1500); return () => clearTimeout(t); }
-  }, [step, navigate]);
 
   const content = {
     English: {
@@ -388,17 +377,6 @@ export function AadhaarBiometricPage() {
             </div>
           )}
 
-          {/* ── Verified ── */}
-          {step === 'verified' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <div className="w-32 h-32 flex items-center justify-center">
-                <DotLottieReact src={successLottie} autoplay loop={false} style={{ width: '100%', height: '100%' }} />
-              </div>
-              <motion.p initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}
-                className="text-xl font-semibold text-[#111827] mt-6">{t.verifiedTitle}</motion.p>
-            </div>
-          )}
-
           {/* ── Confirm Details ── */}
           {step === 'confirm-details' && (
             <div className="flex flex-col items-center">
@@ -435,7 +413,7 @@ export function AadhaarBiometricPage() {
 
               <StickyFooter>
                 <div className="space-y-3">
-                  <CTAButton onClick={() => setStep('updating-records')}>{t.confirmBtn}</CTAButton>
+                  <CTAButton onClick={() => navigate('/sanctioned-offers')}>{t.confirmBtn}</CTAButton>
                   {/* Tertiary: no stroke, no fill. Brand-coloured text carries the
                       affordance, so it reads as secondary to the CTA above without
                       competing with it. */}
@@ -451,34 +429,6 @@ export function AadhaarBiometricPage() {
             </div>
           )}
 
-          {/* ── Updating Records ── */}
-          {step === 'updating-records' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.4 }} className="mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-[#ebecef] flex items-center justify-center">
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
-                    <CheckCircle className="w-6 h-6 text-[#315C9D]" strokeWidth={2} />
-                  </motion.div>
-                </div>
-              </motion.div>
-              <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="text-center">
-                <h2 className="text-xl font-semibold text-[#111827] mb-1">{t.updatingRecordsTitle}</h2>
-                <p className="text-sm text-[#6b7280]">{t.updatingRecordsSubtitle}</p>
-              </motion.div>
-            </div>
-          )}
-
-          {/* ── Success ── */}
-          {step === 'success' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", duration: 0.5, bounce: 0.4 }}>
-                <div className="w-32 h-32 rounded-2xl bg-[#2da94f]/10 flex items-center justify-center">
-                  <CheckCircle className="w-16 h-16 text-[#2da94f]" strokeWidth={2} />
-                </div>
-              </motion.div>
-            </div>
-          )}
         </div>
       </main>
 

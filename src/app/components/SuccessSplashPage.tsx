@@ -9,7 +9,7 @@ export function SuccessSplashPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigate('/loading');
+      navigate('/sanctioned-offers');
     }, 1500);
 
     return () => clearTimeout(timer);

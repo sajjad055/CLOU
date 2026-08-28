@@ -43,7 +43,6 @@ export type HrmsStepId =
   | 'aadhaar' // /aadhaar-verification (one or more segments)
   | 'ckyc-otp' // /otp-verification
   | 'ckyc-details' // /ckyc-customer-details
-  | 'cif-success' // /success
   | 'offers'; // /sanctioned-offers (terminal)
 
 /** One simulated backend step rendered as a labelled progress row. */
@@ -76,11 +75,8 @@ export type AadhaarStepId =
   | 'blink'
   | 'scanning'
   | 'verifying'
-  | 'verified'
   | 'ckyc-consent-otp' // NEW, HRMS-only: CKYC-download consent confirmed by OTP
-  | 'ckyc-retrieval' // NEW, HRMS-only
-  | 'updating-records'
-  | 'success';
+  | 'ckyc-retrieval'; // NEW, HRMS-only
 
 export interface AadhaarSegment {
   id: string;
@@ -88,8 +84,6 @@ export interface AadhaarSegment {
   steps: AadhaarStepId[];
   /** Seed the Aadhaar number from journey state instead of asking for it. */
   seedAadhaarFromJourney: boolean;
-  /** Relabel `updating-records` as CIF creation for this segment. */
-  updatingRecordsAs?: 'records' | 'cif';
   /** Where to go when the last step of this segment finishes. */
   exitRoute: string;
   /** Processing steps rendered by the `ckyc-retrieval` step, when present. */
@@ -215,14 +209,6 @@ export const ckycByAadhaar: ProcessingStep = {
   durationMs: 2000,
 };
 
-/** CIF creation, rendered by `updating-records` when `updatingRecordsAs === 'cif'`. */
-export const cifCreate: ProcessingStep = {
-  id: 'cif-create',
-  labelEn: 'Creating your customer record (CIF)…',
-  labelTa: 'உங்கள் வாடிக்கையாளர் பதிவு (CIF) உருவாக்கப்படுகிறது…',
-  durationMs: 2000,
-};
-
 /** The full catalogue, keyed by step id, for lookup and iteration. */
 export const HRMS_PROCESSING_STEPS: Record<string, ProcessingStep> = {
   [hrmsFetch.id]: hrmsFetch,
@@ -231,7 +217,6 @@ export const HRMS_PROCESSING_STEPS: Record<string, ProcessingStep> = {
   [bankRecordPanFound.id]: bankRecordPanFound,
   [bankRecordPanAbsent.id]: bankRecordPanAbsent,
   [ckycByAadhaar.id]: ckycByAadhaar,
-  [cifCreate.id]: cifCreate,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -292,12 +277,12 @@ const hrmsPanEtb: HrmsFlowDefinition = {
   },
 };
 
-/** Flow 2 — HRMS returned a PAN, the mobile dedupe finds no record, full Aadhaar + Face RD + CIF. */
+/** Flow 2 — HRMS returned a PAN, the mobile dedupe finds no record, full Aadhaar + Face RD. */
 const hrmsPanNtb: HrmsFlowDefinition = {
   id: 'hrms-pan-ntb',
   labelEn: '▶ HRMS PAN Present, NTB',
   descriptionEn:
-    'HRMS fetch → HRMS details + both consents → OTP → Mobile dedupe + CKYC ID → CKYC details (NTB) → Aadhaar + Face → CIF → Offers',
+    'HRMS fetch → HRMS details + both consents → OTP → Mobile dedupe + CKYC ID → CKYC details (NTB) → Aadhaar + Face → KYC complete',
   entryRoute: '/hrms-details',
   hrmsPanPresent: true,
   dedupe: 'ntb',
@@ -320,11 +305,9 @@ const hrmsPanNtb: HrmsFlowDefinition = {
       next: '/ckyc-customer-details',
     },
     { id: 'ckyc-details', route: '/ckyc-customer-details', next: '/aadhaar-verification' },
-    // Segment 0: `cif-create` is rendered by `updating-records`.
     {
       id: 'aadhaar',
       route: '/aadhaar-verification',
-      processing: [cifCreate],
       next: '/sanctioned-offers',
     },
     { id: 'offers', route: '/sanctioned-offers', next: null },
@@ -340,10 +323,8 @@ const hrmsPanNtb: HrmsFlowDefinition = {
         'blink',
         'scanning',
         'verifying',
-        'updating-records',
       ],
       seedAadhaarFromJourney: false,
-      updatingRecordsAs: 'cif',
       exitRoute: '/sanctioned-offers',
     },
   ],
@@ -411,14 +392,14 @@ const hrmsNopanEtb: HrmsFlowDefinition = {
 /**
  * Flow 4 — no HRMS PAN, and the mobile dedupe finds no bank record at all. With
  * no PAN available from either source the journey falls back to Aadhaar, and
- * being new to the bank it also needs Face RD and a CIF. So the Aadhaar screen
+ * being new to the bank it also needs Face RD. So the Aadhaar screen
  * runs twice as two disjoint segments, and no second Aadhaar OTP is ever shown.
  */
 const hrmsNopanNtb: HrmsFlowDefinition = {
   id: 'hrms-nopan-ntb',
   labelEn: '▶ HRMS No PAN, NTB (no bank record)',
   descriptionEn:
-    'HRMS fetch → HRMS details → Mobile dedupe (no match) → PAN + Aadhaar → Aadhaar OTP → Aadhaar details + CKYC consent → CKYC OTP → CKYC by Aadhaar → CKYC details → Face → CIF → Offers',
+    'HRMS fetch → HRMS details → Mobile dedupe (no match) → PAN + Aadhaar → Aadhaar OTP → Aadhaar details + CKYC consent → CKYC OTP → CKYC by Aadhaar → CKYC details → Face → KYC complete',
   entryRoute: '/hrms-details',
   hrmsPanPresent: false,
   dedupe: 'ntb',
@@ -455,14 +436,12 @@ const hrmsNopanNtb: HrmsFlowDefinition = {
     // it never visits the shared OTP screen. Declaring the step would make that
     // screen offer a PAN-keyed CKYC consent this flow cannot act on.
     { id: 'ckyc-details', route: '/ckyc-customer-details', next: '/aadhaar-verification' },
-    // Segment 1 — Face RD then CIF creation.
+    // Segment 1 — Face RD, then directly to the single KYC-complete screen.
     {
       id: 'aadhaar',
       route: '/aadhaar-verification',
-      processing: [cifCreate],
-      next: '/success',
+      next: '/sanctioned-offers',
     },
-    { id: 'cif-success', route: '/success', next: '/sanctioned-offers' },
     { id: 'offers', route: '/sanctioned-offers', next: null },
   ],
   aadhaarSegments: [
@@ -485,13 +464,9 @@ const hrmsNopanNtb: HrmsFlowDefinition = {
         'blink',
         'scanning',
         'verifying',
-        'verified',
-        'updating-records',
-        'success',
       ],
       seedAadhaarFromJourney: true,
-      updatingRecordsAs: 'cif',
-      exitRoute: '/success',
+      exitRoute: '/sanctioned-offers',
     },
   ],
   ckycDetails: {

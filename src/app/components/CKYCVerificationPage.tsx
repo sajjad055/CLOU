@@ -1,12 +1,12 @@
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileText, CheckCircle, MapPin, Mail } from 'lucide-react';
+import { FileText, MapPin, Mail } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
 import { useLanguage } from '../hooks/useLanguage';
 
-type VerificationStep = 'pan-input' | 'verifying-pan' | 'pan-verified' | 'address-confirmation' | 'address-declaration' | 'updating-address' | 'success';
+type VerificationStep = 'pan-input' | 'verifying-pan' | 'address-confirmation';
 
 function CTAButton({ onClick, disabled, children }: { onClick?: () => void; disabled?: boolean; children: React.ReactNode }) {
   return (
@@ -118,17 +118,8 @@ export function CKYCVerificationPage() {
   const isValid = (ckycNumber.length === 14) || (validatePAN(panNumber) && name.trim() !== '' && dobDay !== '' && dobMonth !== '' && dobYear !== '');
 
   useEffect(() => {
-    if (step === 'verifying-pan') { const t = setTimeout(() => setStep('pan-verified'), 2000); return () => clearTimeout(t); }
+    if (step === 'verifying-pan') { const t = setTimeout(() => setStep('address-confirmation'), 2000); return () => clearTimeout(t); }
   }, [step]);
-  useEffect(() => {
-    if (step === 'pan-verified') { const t = setTimeout(() => setStep('address-confirmation'), 1500); return () => clearTimeout(t); }
-  }, [step]);
-  useEffect(() => {
-    if (step === 'updating-address') { const t = setTimeout(() => setStep('success'), 2000); return () => clearTimeout(t); }
-  }, [step]);
-  useEffect(() => {
-    if (step === 'success') { const t = setTimeout(() => navigate('/loading'), 1500); return () => clearTimeout(t); }
-  }, [step, navigate]);
 
   const selectStyle = "w-full bg-transparent border border-[#e5e7eb] rounded-lg px-3 h-14 focus:border-[#254576] focus:ring-1 focus:ring-[#254576]/20 transition-all outline-none text-sm font-semibold text-[#212121] cursor-pointer appearance-none";
   const chevronBg = `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
@@ -248,19 +239,6 @@ export function CKYCVerificationPage() {
             </div>
           )}
 
-          {/* ── PAN Verified ── */}
-          {step === 'pan-verified' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 15 }}>
-                <div className="w-32 h-32 rounded-2xl bg-[#2da94f]/10 flex items-center justify-center">
-                  <CheckCircle className="w-16 h-16 text-[#2da94f]" strokeWidth={2} />
-                </div>
-              </motion.div>
-              <motion.p initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}
-                className="text-xl font-semibold text-[#2da94f] mt-6">{t.panVerifiedTitle}</motion.p>
-            </div>
-          )}
-
           {/* ── Address Confirmation ── */}
           {step === 'address-confirmation' && (
             <div className="flex flex-col items-center">
@@ -311,33 +289,6 @@ export function CKYCVerificationPage() {
             </div>
           )}
 
-          {/* ── Updating Address ── */}
-          {step === 'updating-address' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.4 }} className="mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-[#ebecef] flex items-center justify-center">
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
-                    <MapPin className="w-6 h-6 text-[#315C9D]" strokeWidth={2} />
-                  </motion.div>
-                </div>
-              </motion.div>
-              <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="text-center">
-                <h2 className="text-xl font-semibold text-[#111827] mb-1">{t.updatingAddressTitle}</h2>
-                <p className="text-sm text-[#6b7280]">{t.updatingAddressSubtitle}</p>
-              </motion.div>
-            </div>
-          )}
-
-          {/* ── Success ── */}
-          {step === 'success' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 15 }}>
-                <div className="w-32 h-32 rounded-2xl bg-[#2da94f]/10 flex items-center justify-center">
-                  <CheckCircle className="w-16 h-16 text-[#2da94f]" strokeWidth={2} />
-                </div>
-              </motion.div>
-            </div>
-          )}
         </div>
       </main>
 
@@ -384,7 +335,7 @@ export function CKYCVerificationPage() {
                 <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">{content.English.addressDeclarationText}</p>
               </div>
               <div className="px-6 py-5 border-t border-[#e5e7eb]">
-                <CTAButton onClick={() => { setShowAddressDeclarationSheet(false); setStep('updating-address'); }}>
+                <CTAButton onClick={() => { setShowAddressDeclarationSheet(false); navigate('/sanctioned-offers'); }}>
                   {content.English.agreeAndContinue}
                 </CTAButton>
               </div>

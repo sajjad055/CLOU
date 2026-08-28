@@ -7,14 +7,12 @@ import { StickyFooter } from './StickyFooter';
 import { BottomSheet } from './BottomSheet';
 import { useLanguage } from '../hooks/useLanguage';
 import type { AadhaarStepId } from '../flows/hrmsFlows';
-import { HRMS_EMPLOYEE, cifCreate, getAadhaarSegment, getActiveFlow, isHrmsFlow } from '../flows/hrmsFlows';
+import { HRMS_EMPLOYEE, getAadhaarSegment, getActiveFlow, isHrmsFlow } from '../flows/hrmsFlows';
 import { advanceAadhaarSegment, readJourney } from '../flows/hrmsJourney';
 import { tr } from '../flows/hrmsContent';
 import aadhaarImg from '@/assets/aadhaar.svg';
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import faceScanImg from '@/assets/face-scan.svg';
 import faceRdImg from '@/assets/facerd.svg';
-import successLottie from '@/assets/success.lottie';
 
 // South Indian middle-aged Tamil man
 import facePersonImg from '@/assets/face-person.png';
@@ -32,9 +30,6 @@ const DEFAULT_SEQUENCE: AadhaarStepId[] = [
   'blink',
   'scanning',
   'verifying',
-  'verified',
-  'updating-records',
-  'success',
 ];
 
 function CTAButton({ onClick, disabled, children }: { onClick?: () => void; disabled?: boolean; children: React.ReactNode }) {
@@ -68,8 +63,6 @@ export function AadhaarVerificationPage() {
   );
 
   const sequence = segment?.steps ?? DEFAULT_SEQUENCE;
-  /** HRMS segments only: `updating-records` is relabelled as CIF creation. */
-  const updatingAsCif = segment?.updatingRecordsAs === 'cif';
   /**
    * HRMS segments that go on to download a CKYC record with this Aadhaar. Only
    * those segments declare `ckyc-consent-otp`, so this is false for every one of
@@ -89,7 +82,9 @@ export function AadhaarVerificationPage() {
       return;
     }
     const flow = localStorage.getItem('activeFlow') || 'ntb-no-ckyc';
-    const dest = (flow === 'ntb-no-ckyc-id' || flow === 'ntb-knows-ckyc-id') ? '/employee-id-upload' : '/loading';
+    const dest = (flow === 'ntb-no-ckyc-id' || flow === 'ntb-knows-ckyc-id')
+      ? '/employee-id-upload'
+      : '/sanctioned-offers';
     navigate(dest);
   };
 
@@ -249,12 +244,6 @@ export function AadhaarVerificationPage() {
   useEffect(() => {
     if (step === 'verifying') { const t = setTimeout(() => goNext(), 2000); return () => clearTimeout(t); }
   }, [step]);
-  useEffect(() => {
-    if (step === 'verified') { const t = setTimeout(() => goNext(), 1500); return () => clearTimeout(t); }
-  }, [step]);
-  useEffect(() => {
-    if (step === 'updating-records') { const t = setTimeout(() => goNext(), updatingAsCif ? cifCreate.durationMs : 2000); return () => clearTimeout(t); }
-  }, [step]);
 
   // HRMS-only: walk `segment.processing` one row at a time, then advance.
   useEffect(() => {
@@ -267,13 +256,6 @@ export function AadhaarVerificationPage() {
     }, current.durationMs);
     return () => clearTimeout(t);
   }, [step, retrievalIndex]);
-  useEffect(() => {
-    if (step === 'success') {
-      const t = setTimeout(() => goNext(), 1500);
-      return () => clearTimeout(t);
-    }
-  }, [step, navigate]);
-
   const content = {
     English: {
       aadhaarTitle: 'Enter Aadhaar Number',
@@ -735,17 +717,6 @@ export function AadhaarVerificationPage() {
             </div>
           )}
 
-          {/* ── Verified ── */}
-          {step === 'verified' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <div className="w-28 h-28">
-                <DotLottieReact src={successLottie} autoplay loop={false} style={{ width: '100%', height: '100%' }} />
-              </div>
-              <motion.p initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}
-                className="text-xl font-semibold text-[#111827] mt-6">{t.verifiedTitle}</motion.p>
-            </div>
-          )}
-
           {/* ── Confirm Details ── */}
           {step === 'confirm-details' && (
             <div className="flex flex-col items-center">
@@ -825,32 +796,6 @@ export function AadhaarVerificationPage() {
                   <ArrowRight className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
                 </CTAButton>
               </StickyFooter>
-            </div>
-          )}
-
-          {/* ── Updating Records ── */}
-          {step === 'updating-records' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-[#ebecef] flex items-center justify-center">
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
-                    <CheckCircle className="w-6 h-6 text-[#315C9D]" strokeWidth={2} />
-                  </motion.div>
-                </div>
-              </motion.div>
-              <h2 className="text-xl font-semibold text-[#111827] mb-1">
-                {updatingAsCif ? tr(selectedLanguage, 'stepCifCreate') : t.updatingTitle}
-              </h2>
-              {updatingAsCif ? (
-                <div className="flex items-center gap-3 mt-2 px-4 py-3 rounded-lg border border-[#315C9D]/20 bg-[#315C9D]/5">
-                  <Loader2 className="w-5 h-5 text-[#315C9D] animate-spin flex-shrink-0" strokeWidth={2.5} aria-hidden="true" />
-                  <span className="text-sm font-medium text-[#315C9D]">
-                    {selectedLanguage === 'English' ? cifCreate.labelEn : cifCreate.labelTa}
-                  </span>
-                </div>
-              ) : (
-                <p className="text-sm text-[#6b7280]">{t.updatingSubtitle}</p>
-              )}
             </div>
           )}
 
@@ -994,15 +939,6 @@ export function AadhaarVerificationPage() {
                     </div>
                   );
                 })}
-              </div>
-            </div>
-          )}
-
-          {/* ── Success ── */}
-          {step === 'success' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <div className="w-28 h-28">
-                <DotLottieReact src={successLottie} autoplay loop={false} style={{ width: '100%', height: '100%' }} />
               </div>
             </div>
           )}
