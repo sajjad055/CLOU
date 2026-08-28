@@ -17,8 +17,8 @@ import {
 import { readJourney, writeJourney } from '../flows/hrmsJourney';
 import aadhaarImg from '@/assets/aadhaar.svg';
 
-/** Five uppercase letters, four digits, one uppercase letter — `AAAAA9999A`. */
-const PAN_REGEX = /^[A-Z]{5}\d{4}[A-Z]$/;
+/** Three letters, `P`, one letter, four digits and one letter — `AAAPA9999A`. */
+const PAN_REGEX = /^[A-Z]{3}P[A-Z]\d{4}[A-Z]$/;
 
 /** Milliseconds before an entered Aadhaar digit is replaced by its mask character. */
 const MASK_DELAY_MS = 500;
@@ -64,9 +64,9 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
   const reduceMotion = useReducedMotion();
 
   // Fields are seeded from journey state so returning to this screen from a
-  // later step restores what was already entered (Requirement 7.9). The Aadhaar
-  // consent selection is deliberately not persisted: the journey state shape
-  // has no field for it, and a consent statement is re-affirmed on each visit.
+  // later step restores what was already entered (Requirement 7.9). Consent
+  // selections are deliberately not persisted: the journey state shape
+  // has no fields for them, and each statement is re-affirmed on every visit.
   // Only a PAN the customer typed themselves is restored. The journey's `pan`
   // slot also carries record-derived values (HRMS, account lookup), and those
   // must never appear pre-filled in an optional field.
@@ -75,10 +75,12 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
     return journey.panSource === 'user' ? journey.pan : '';
   });
   const [panBlurred, setPanBlurred] = useState(false);
-  const [consent, setConsent] = useState(false);
+  const [aadhaarConsent, setAadhaarConsent] = useState(false);
+  const [panConsent, setPanConsent] = useState(false);
   // Purely informational: the sheet only shows the full consent wording. It never
-  // sets `consent` and never advances the flow, so the CTA gating is untouched.
+  // grants consent and never advances the flow, so the CTA gating is untouched.
   const [showConsentSheet, setShowConsentSheet] = useState(false);
+  const [showPanConsentSheet, setShowPanConsentSheet] = useState(false);
 
   // ── Aadhaar entry with per-digit masking ──
   // Same technique as AadhaarVerificationPage: a transparent input holds the
@@ -148,11 +150,24 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
   const rawAadhaar = aadhaarDigits.join('');
 
   // ── Validation and CTA gating ──
-  const panWellFormed = pan.length === 0 || PAN_REGEX.test(pan);
+  const hasPan = pan.length > 0;
+  const panIsValid = PAN_REGEX.test(pan);
+  const panWellFormed = !hasPan || panIsValid;
   // The error surfaces only after the field has lost focus (Requirement 7.4),
   // but the CTA is gated on validity from the first keystroke (Requirement 7.3).
-  const showPanError = panBlurred && pan.length > 0 && !panWellFormed;
-  const canContinue = rawAadhaar.length === AADHAAR_LENGTH && consent && panWellFormed;
+  const showPanError = panBlurred && hasPan && !panIsValid;
+  const canContinue =
+    rawAadhaar.length === AADHAAR_LENGTH &&
+    aadhaarConsent &&
+    panWellFormed &&
+    (!hasPan || panConsent);
+
+  // PAN consent applies only to the exact valid PAN currently in the field.
+  // Clearing or editing it to an invalid value hides the declaration and
+  // requires fresh consent if a valid PAN is entered again.
+  useEffect(() => {
+    if (!panIsValid) setPanConsent(false);
+  }, [panIsValid]);
 
   const handleContinue = () => {
     if (!canContinue) return;
@@ -335,17 +350,17 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
           <button
             type="button"
             role="checkbox"
-            aria-checked={consent}
+            aria-checked={aadhaarConsent}
             aria-labelledby="pan-aadhaar-consent-label"
-            onClick={() => setConsent(!consent)}
+            onClick={() => setAadhaarConsent(!aadhaarConsent)}
             className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
           >
             <span
               className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
-                consent ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
+                aadhaarConsent ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
               }`}
             >
-              {consent && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
+              {aadhaarConsent && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
             </span>
           </button>
 
@@ -362,6 +377,41 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
             </button>
           </p>
         </div>
+
+        {panIsValid && (
+          <motion.div {...fadeIn(0)} className="mb-3 flex items-start gap-3">
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={panConsent}
+              aria-required="true"
+              aria-labelledby="pan-consent-label"
+              onClick={() => setPanConsent(!panConsent)}
+              className="flex-shrink-0 mt-0.5 p-0.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+            >
+              <span
+                className={`flex w-5 h-5 rounded-[5px] border items-center justify-center transition-colors ${
+                  panConsent ? 'bg-[#315C9D] border-[#315C9D]' : 'bg-white border-[#c4c4c4]'
+                }`}
+              >
+                {panConsent && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
+              </span>
+            </button>
+
+            <p className="text-[12px] text-[#6b7280] leading-relaxed">
+              <span id="pan-consent-label">
+                {tr(selectedLanguage, 'panAadhaarPanConsentText')}
+              </span>{' '}
+              <button
+                type="button"
+                onClick={() => setShowPanConsentSheet(true)}
+                className="text-[12px] font-semibold text-[#315C9D] underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+              >
+                {tr(selectedLanguage, 'panAadhaarReadMore')}
+              </button>
+            </p>
+          </motion.div>
+        )}
 
         <button
           type="button"
@@ -384,6 +434,16 @@ function PANAadhaarEntry({ flow }: { flow: HrmsFlowId }) {
       >
         <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
           {tr(selectedLanguage, 'panAadhaarConsentFull')}
+        </p>
+      </BottomSheet>
+
+      <BottomSheet
+        open={showPanConsentSheet}
+        onClose={() => setShowPanConsentSheet(false)}
+        title={tr(selectedLanguage, 'panAadhaarPanConsentTitle')}
+      >
+        <p className="text-sm text-[#6b7280] leading-relaxed whitespace-pre-line">
+          {tr(selectedLanguage, 'panAadhaarPanConsentFull')}
         </p>
       </BottomSheet>
     </div>

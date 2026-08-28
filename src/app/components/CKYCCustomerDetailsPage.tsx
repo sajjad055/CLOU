@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { ArrowRight, ShieldCheck, Loader2, CheckCircle, Lock, User, CreditCard, Fingerprint, Users, MapPin } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { ArrowRight, ShieldCheck, CheckCircle, Lock, User, CreditCard, Fingerprint, Users, MapPin } from 'lucide-react';
 import { TopBar } from './TopBar';
 import { StickyFooter } from './StickyFooter';
 import { useLanguage } from '../hooks/useLanguage';
@@ -12,16 +11,11 @@ import { tr } from '../flows/hrmsContent';
 /**
  * CKYC Customer Details review screen.
  *
- * Shown right after the CKYC records are fetched — BEFORE the "existing bank
- * customer" (dedupe) check runs. The user simply reviews the details pulled
- * from the CKYC portal and continues.
+ * Shown after the CKYC records are fetched. The user simply reviews the details
+ * pulled from the CKYC portal and continues.
  *
- * Behaviour depends on the active flow:
- *  - "knows CKYC" flows (ckyc-first): CKYC is pulled up-front, so Continue goes
- *    straight to the pre-filled PAN review screen. No extra loading here.
- *  - "no CKYC number" flows (pan-first): PAN + CKYC are already done, so Continue
- *    runs the existing-customer / eligibility check and routes onward. The
- *    ETB/offer steps only appear here — never before the review.
+ * Continue always routes directly to the next journey screen. Backend checks
+ * are intentionally not surfaced as an intermediate processing screen here.
  *
  * All values below are dummy data for the front-end prototype.
  */
@@ -35,72 +29,42 @@ const CKYC_DATA = {
   address: '12, Gandhi Street, T. Nagar, Chennai, Tamil Nadu - 600017',
 };
 
-type Phase = 'review' | 'processing';
-
-interface ProcessingStep {
-  id: string;
-  labelEn: string;
-  labelTa: string;
-  durationMs: number;
-}
-
-// Post-review loading + destination, keyed by active flow (pan-first flows only).
-const dedupeSteps = {
-  check: { id: 'dedupe', labelEn: 'Checking existing bank records...', labelTa: 'ஏற்கனவே உள்ள வங்கி பதிவுகளை சரிபார்க்கிறது...', durationMs: 2000 },
-  ntbResult: { id: 'ntb', labelEn: 'New to bank — continuing verification', labelTa: 'வங்கிக்கு புதியவர் — சரிபார்ப்பு தொடர்கிறது', durationMs: 1500 },
-  etbResult: { id: 'etb', labelEn: 'Existing customer found ✓', labelTa: 'ஏற்கனவே உள்ள வாடிக்கையாளர் கண்டறியப்பட்டது ✓', durationMs: 1500 },
-  bre: { id: 'bre', labelEn: 'Running credit eligibility check...', labelTa: 'கடன் தகுதி சோதனை நடைபெறுகிறது...', durationMs: 2200 },
-  offers: { id: 'offers', labelEn: 'Fetching your sanctioned offers...', labelTa: 'உங்கள் அனுமதிக்கப்பட்ட சலுகைகளைப் பெறுகிறது...', durationMs: 1800 },
-} satisfies Record<string, ProcessingStep>;
-
 interface FlowConfig {
-  ckycFirst: boolean;
   next: string;
-  steps: ProcessingStep[];
 }
 
 /**
- * Config as actually consumed by this screen. `ckycFirst` is an existing-flow
- * concern; `panSource` is HRMS-only and `undefined` for every existing flow, so
- * its render block is omitted for them. `dedupeResult` is carried but no longer
- * rendered — the dedupe outcome shows itself through which screens follow.
+ * Config as actually consumed by this screen. `panSource` is HRMS-only and
+ * `undefined` for every existing flow, so its render block is omitted for them.
+ * `dedupeResult` is carried but not rendered — the outcome is represented by
+ * which screens follow.
  */
 type ResolvedConfig = {
-  ckycFirst?: boolean;
   next: string;
-  steps: ProcessingStep[];
   dedupeResult?: CkycDetailsConfig['dedupeResult'];
   panSource?: CkycDetailsConfig['panSource'];
 };
 
 const flowConfigs: Record<string, FlowConfig> = {
-  // ── Knows CKYC (ckyc-first): review then PAN review, no dedupe loading here ──
-  'ntb-knows-ckyc': { ckycFirst: true, next: '/pan-prefilled', steps: [] },
-  'etb-knows-ckyc': { ckycFirst: true, next: '/pan-prefilled-etb', steps: [] },
-  'ntb-knows-ckyc-id': { ckycFirst: true, next: '/pan-prefilled-ntb-id', steps: [] },
-  'etb-knows-ckyc-id': { ckycFirst: true, next: '/pan-prefilled-etb-id', steps: [] },
-
-  // ── No CKYC number (pan-first): run existing-customer check after review ──
-  'ntb-no-ckyc': { ckycFirst: false, next: '/aadhaar-verification', steps: [dedupeSteps.check, dedupeSteps.ntbResult] },
-  'ntb-no-ckyc-id': { ckycFirst: false, next: '/aadhaar-verification', steps: [dedupeSteps.check, dedupeSteps.ntbResult] },
-  'etb-no-ckyc': { ckycFirst: false, next: '/sanctioned-offers', steps: [dedupeSteps.check, dedupeSteps.etbResult, dedupeSteps.bre] },
-  'etb-no-ckyc-id': { ckycFirst: false, next: '/employee-id-upload', steps: [dedupeSteps.check, dedupeSteps.etbResult] },
+  'ntb-knows-ckyc': { next: '/pan-prefilled' },
+  'etb-knows-ckyc': { next: '/pan-prefilled-etb' },
+  'ntb-knows-ckyc-id': { next: '/pan-prefilled-ntb-id' },
+  'etb-knows-ckyc-id': { next: '/pan-prefilled-etb-id' },
+  'ntb-no-ckyc': { next: '/aadhaar-verification' },
+  'ntb-no-ckyc-id': { next: '/aadhaar-verification' },
+  'etb-no-ckyc': { next: '/sanctioned-offers' },
+  'etb-no-ckyc-id': { next: '/employee-id-upload' },
 };
 
 export function CKYCCustomerDetailsPage() {
   const navigate = useNavigate();
   const [selectedLanguage] = useLanguage();
-  const [phase, setPhase] = useState<Phase>('review');
 
   const flow = (typeof window !== 'undefined' && localStorage.getItem('activeFlow')) || 'ntb-no-ckyc';
   // Existing keys resolve on the first lookup, so the eight existing flows
   // never reach the HRMS config at all.
   const config: ResolvedConfig =
     flowConfigs[flow] ?? getCkycDetailsConfig(flow) ?? flowConfigs['ntb-no-ckyc'];
-
-  // Processing state (pan-first flows only)
-  const [currentStep, setCurrentStep] = useState(0);
-  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
 
   const content = {
     English: {
@@ -134,29 +98,8 @@ export function CKYCCustomerDetailsPage() {
   const t = content[selectedLanguage];
 
   const handleContinue = () => {
-    if (config.ckycFirst || config.steps.length === 0) {
-      navigate(config.next);
-      return;
-    }
-    setCurrentStep(0);
-    setCompletedSteps([]);
-    setPhase('processing');
+    navigate(config.next);
   };
-
-  // Processing progression (pan-first flows)
-  useEffect(() => {
-    if (phase !== 'processing') return;
-    if (currentStep >= config.steps.length) {
-      const timer = setTimeout(() => navigate(config.next), 800);
-      return () => clearTimeout(timer);
-    }
-    const current = config.steps[currentStep];
-    const timer = setTimeout(() => {
-      setCompletedSteps(prev => [...prev, current.id]);
-      setCurrentStep(prev => prev + 1);
-    }, current.durationMs);
-    return () => clearTimeout(timer);
-  }, [phase, currentStep, config, navigate]);
 
   // ── PAN row source (HRMS flows only) ──
   // `null` for the eight existing flows, so the CKYC record PAN renders as today.
@@ -190,19 +133,17 @@ export function CKYCCustomerDetailsPage() {
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto px-4 pt-8 pb-32">
 
-          {/* ── Review ── */}
-          {phase === 'review' && (
-            <div className="flex flex-col">
-              <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.4 }} className="flex justify-center mb-6">
+          <div className="flex flex-col">
+            <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.4 }} className="flex justify-center mb-6">
                 <div className="w-12 h-12 rounded-2xl bg-[#ebecef] flex items-center justify-center">
                   <CheckCircle className="w-6 h-6 text-[#315C9D]" strokeWidth={2} />
                 </div>
-              </motion.div>
+            </motion.div>
 
-              <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="text-center mb-6">
+            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="text-center mb-6">
                 <h1 className="text-xl font-semibold text-[#111827] mb-1">{t.title}</h1>
                 <p className="text-sm text-[#6b7280] leading-relaxed">{t.subtitle}</p>
-              </motion.div>
+            </motion.div>
 
               {/* No dedupe banner. The outcome does not need announcing here —
                   the journey simply continues into Face RD and CIF creation when
@@ -261,59 +202,7 @@ export function CKYCCustomerDetailsPage() {
                   <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
                 </button>
               </StickyFooter>
-            </div>
-          )}
-
-          {/* ── Processing (existing-customer check) ── */}
-          {phase === 'processing' && (
-            <div className="flex flex-col items-center justify-center min-h-[65vh]">
-              <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-8">
-                <div className="w-14 h-14 rounded-2xl bg-[#315C9D]/10 flex items-center justify-center">
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
-                    <Loader2 className="w-7 h-7 text-[#315C9D]" strokeWidth={2} />
-                  </motion.div>
-                </div>
-              </motion.div>
-
-              <div className="w-full space-y-3">
-                {config.steps.map((ps, index) => {
-                  const isCompleted = completedSteps.includes(ps.id);
-                  const isActive = currentStep === index && !isCompleted;
-                  // Progressive reveal — never show future (unknown) steps up front
-                  if (!isCompleted && !isActive) return null;
-                  return (
-                    <motion.div
-                      key={ps.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all ${
-                        isCompleted ? 'bg-[#2da94f]/5 border-[#2da94f]/20' :
-                        isActive ? 'bg-[#315C9D]/5 border-[#315C9D]/20' :
-                        'bg-[#f9fafb] border-[#e5e7eb]'
-                      }`}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle className="w-5 h-5 text-[#2da94f] flex-shrink-0" strokeWidth={2.5} />
-                      ) : (
-                        <Loader2 className="w-5 h-5 text-[#315C9D] animate-spin flex-shrink-0" strokeWidth={2.5} />
-                      )}
-                      <span className={`text-sm font-medium ${isCompleted ? 'text-[#2da94f]' : 'text-[#315C9D]'}`}>
-                        {selectedLanguage === 'English' ? ps.labelEn : ps.labelTa}
-                      </span>
-                    </motion.div>
-                  );
-                })}
-              </div>
-
-              <div className="w-full mt-6">
-                <div className="w-full h-1.5 bg-[#315C9D]/10 rounded-full overflow-hidden">
-                  <motion.div className="h-full bg-[#315C9D] rounded-full" initial={{ width: '0%' }}
-                    animate={{ width: `${(completedSteps.length / Math.max(config.steps.length, 1)) * 100}%` }} transition={{ duration: 0.4 }} />
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
 
         </div>
       </main>

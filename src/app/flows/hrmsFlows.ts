@@ -43,7 +43,7 @@ export type HrmsStepId =
   | 'aadhaar' // /aadhaar-verification (one or more segments)
   | 'ckyc-otp' // /otp-verification
   | 'ckyc-details' // /ckyc-customer-details
-  | 'cif-success' // /success -> /loading
+  | 'cif-success' // /success
   | 'offers'; // /sanctioned-offers (terminal)
 
 /** One simulated backend step rendered as a labelled progress row. */
@@ -97,18 +97,11 @@ export interface AadhaarSegment {
 }
 
 export interface CkycDetailsConfig {
-  /** Dedupe banner rendered on CKYCCustomerDetailsPage. HRMS flows only. */
+  /** Dedupe outcome carried by the HRMS flow. */
   dedupeResult: 'etb' | 'ntb';
   /** Where the displayed PAN comes from. `'none'` renders a blank PAN with an explanatory label. */
   panSource: 'hrms' | 'bank-record' | 'journey' | 'none';
   next: string;
-  /**
-   * Post-review processing. The dedupe already ran earlier in every HRMS flow,
-   * so this carries only the eligibility check and offers fetch — and only on
-   * the flows whose `next` is the offers screen. The flows that continue to
-   * Aadhaar leave it empty and get their loading screen later, via `/loading`.
-   */
-  steps: ProcessingStep[];
 }
 
 export interface HrmsFlowDefinition {
@@ -222,25 +215,6 @@ export const ckycByAadhaar: ProcessingStep = {
   durationMs: 2000,
 };
 
-/**
- * Credit eligibility check, run after the CKYC review on the flows that go
- * straight to the offers screen from there.
- */
-export const breCheck: ProcessingStep = {
-  id: 'bre',
-  labelEn: 'Running credit eligibility check…',
-  labelTa: 'கடன் தகுதி சோதனை நடைபெறுகிறது…',
-  durationMs: 2200,
-};
-
-/** Offers fetch, the last step before the sanctioned-offers screen. */
-export const offersFetch: ProcessingStep = {
-  id: 'offers-fetch',
-  labelEn: 'Fetching your sanctioned offers…',
-  labelTa: 'உங்கள் அனுமதிக்கப்பட்ட சலுகைகளைப் பெறுகிறது…',
-  durationMs: 1800,
-};
-
 /** CIF creation, rendered by `updating-records` when `updatingRecordsAs === 'cif'`. */
 export const cifCreate: ProcessingStep = {
   id: 'cif-create',
@@ -257,8 +231,6 @@ export const HRMS_PROCESSING_STEPS: Record<string, ProcessingStep> = {
   [bankRecordPanFound.id]: bankRecordPanFound,
   [bankRecordPanAbsent.id]: bankRecordPanAbsent,
   [ckycByAadhaar.id]: ckycByAadhaar,
-  [breCheck.id]: breCheck,
-  [offersFetch.id]: offersFetch,
   [cifCreate.id]: cifCreate,
 };
 
@@ -317,10 +289,6 @@ const hrmsPanEtb: HrmsFlowDefinition = {
     dedupeResult: 'etb',
     panSource: 'hrms',
     next: '/sanctioned-offers',
-    // The eligibility check runs on this screen. The salary advances themselves
-    // are not fetched here — they surface on the home screen after the
-    // application is submitted, which may not be instant.
-    steps: [breCheck],
   },
 };
 
@@ -357,10 +325,8 @@ const hrmsPanNtb: HrmsFlowDefinition = {
       id: 'aadhaar',
       route: '/aadhaar-verification',
       processing: [cifCreate],
-      next: '/success',
+      next: '/sanctioned-offers',
     },
-    // `/success` (SuccessSplashPage) chains into `/loading` (LoadingPage); both existing.
-    { id: 'cif-success', route: '/success', next: '/sanctioned-offers' },
     { id: 'offers', route: '/sanctioned-offers', next: null },
   ],
   aadhaarSegments: [
@@ -374,20 +340,17 @@ const hrmsPanNtb: HrmsFlowDefinition = {
         'blink',
         'scanning',
         'verifying',
-        'verified',
         'updating-records',
-        'success',
       ],
       seedAadhaarFromJourney: false,
       updatingRecordsAs: 'cif',
-      exitRoute: '/success',
+      exitRoute: '/sanctioned-offers',
     },
   ],
   ckycDetails: {
     dedupeResult: 'ntb',
     panSource: 'hrms',
     next: '/aadhaar-verification',
-    steps: [],
   },
 };
 
@@ -442,9 +405,6 @@ const hrmsNopanEtb: HrmsFlowDefinition = {
     dedupeResult: 'etb',
     panSource: 'bank-record',
     next: '/sanctioned-offers',
-    // Straight to offers from here, so the eligibility check and offers fetch
-    // run on this screen rather than the offers appearing instantly.
-    steps: [breCheck],
   },
 };
 
@@ -538,7 +498,6 @@ const hrmsNopanNtb: HrmsFlowDefinition = {
     dedupeResult: 'ntb',
     panSource: 'journey',
     next: '/aadhaar-verification',
-    steps: [],
   },
 };
 
@@ -608,9 +567,6 @@ const hrmsNopanEtbNopan: HrmsFlowDefinition = {
     dedupeResult: 'etb',
     panSource: 'none',
     next: '/sanctioned-offers',
-    // Straight to offers from here, so the eligibility check and offers fetch
-    // run on this screen rather than the offers appearing instantly.
-    steps: [breCheck],
   },
 };
 

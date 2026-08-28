@@ -107,6 +107,11 @@ export interface HrmsStrings {
   panAadhaarAadhaarRequiredMarker: string;
   panAadhaarAadhaarPlaceholder: string;
   panAadhaarConsentText: string;
+  /** Appears only when the optional PAN is complete and valid. */
+  panAadhaarPanConsentText: string;
+  panAadhaarPanConsentTitle: string;
+  /** Full PAN consent wording, paragraph-separated by `\n\n`. */
+  panAadhaarPanConsentFull: string;
   /** Opens the read-only Aadhaar consent sheet from beside the consent checkbox. */
   panAadhaarReadMore: string;
   panAadhaarConsentTitle: string;
@@ -160,7 +165,7 @@ const English: HrmsStrings = {
   hrmsFetchingTitle: 'Fetching Your Employee Details',
   hrmsFetchingSubtitle: 'This takes a few seconds. Please stay on this screen.',
   hrmsGreeting: 'Hello',
-  hrmsGreetingLead: 'Get salary advances on your UPI',
+  hrmsGreetingLead: 'Complete your KYC Journey',
 
   // ── HRMS details screen — field labels ──
   hrmsNameLabel: 'Name',
@@ -210,14 +215,19 @@ const English: HrmsStrings = {
     'Your Aadhaar number is required for identity verification. Adding your PAN is optional.',
   panAadhaarPanLabel: 'PAN',
   panAadhaarPanOptionalMarker: 'Optional',
-  panAadhaarPanPlaceholder: 'AAAAA9999A',
+  panAadhaarPanPlaceholder: 'AAAPA9999A',
   panAadhaarPanFormatError:
-    'Enter a valid PAN in the format AAAAA9999A — five letters, four digits and one letter.',
+    'Enter a valid PAN in the format AAAPA9999A — the fourth character must be P.',
   panAadhaarAadhaarLabel: 'Aadhaar Number',
   panAadhaarAadhaarRequiredMarker: 'Required',
   panAadhaarAadhaarPlaceholder: 'Enter your 12-digit Aadhaar number',
   panAadhaarConsentText:
     'I authorise Indian Overseas Bank to use my Aadhaar number for identity verification.',
+  panAadhaarPanConsentText:
+    'I authorise Indian Overseas Bank to use my PAN for identity verification.',
+  panAadhaarPanConsentTitle: 'PAN Consent',
+  panAadhaarPanConsentFull:
+    'I agree and authorise Indian Overseas Bank to use my PAN, and to retrieve my name and PAN status from the Income Tax Department or an authorised PAN verification service, limited to authenticating my identity for this credit application.\n\nI understand that Indian Overseas Bank will verify my identity through the PAN verification system for personal loans and/or for other purposes as permitted under applicable law.\n\nI understand that Indian Overseas Bank shall ensure the security and confidentiality of my PAN and related identity data and prohibit its use other than for identity verification and processing this application, except as required by law or regulation.\n\nI hereby authorise Indian Overseas Bank to verify and authenticate me using the PAN provided.',
   panAadhaarReadMore: 'Read more',
   panAadhaarConsentTitle: 'Aadhaar Consent',
   panAadhaarConsentFull:
@@ -262,7 +272,7 @@ const Tamil: HrmsStrings = {
   hrmsFetchingTitle: 'உங்கள் ஊழியர் விவரங்கள் பெறப்படுகின்றன',
   hrmsFetchingSubtitle: 'இதற்கு சில வினாடிகள் ஆகும். இந்தத் திரையிலேயே இருக்கவும்.',
   hrmsGreeting: 'வணக்கம்',
-  hrmsGreetingLead: 'உங்கள் UPI யில் சம்பள முன்பணம் பெறுங்கள்',
+  hrmsGreetingLead: 'உங்கள் KYC பயணத்தை நிறைவு செய்யுங்கள்',
 
   // ── HRMS details screen — field labels ──
   hrmsNameLabel: 'பெயர்',
@@ -312,14 +322,19 @@ const Tamil: HrmsStrings = {
     'அடையாள சரிபார்ப்புக்கு உங்கள் ஆதார் எண் தேவை. PAN ஐ வழங்குவது விருப்பத்திற்குரியது.',
   panAadhaarPanLabel: 'PAN',
   panAadhaarPanOptionalMarker: 'விருப்பத்திற்குரியது',
-  panAadhaarPanPlaceholder: 'AAAAA9999A',
+  panAadhaarPanPlaceholder: 'AAAPA9999A',
   panAadhaarPanFormatError:
-    'AAAAA9999A வடிவத்தில் சரியான PAN ஐ உள்ளிடவும் — ஐந்து எழுத்துகள், நான்கு இலக்கங்கள், ஒரு எழுத்து.',
+    'AAAPA9999A வடிவத்தில் சரியான PAN ஐ உள்ளிடவும் — நான்காவது எழுத்து P ஆக இருக்க வேண்டும்.',
   panAadhaarAadhaarLabel: 'ஆதார் எண்',
   panAadhaarAadhaarRequiredMarker: 'கட்டாயம்',
   panAadhaarAadhaarPlaceholder: 'உங்கள் 12 இலக்க ஆதார் எண்ணை உள்ளிடவும்',
   panAadhaarConsentText:
     'அடையாள சரிபார்ப்புக்கு எனது ஆதார் எண்ணைப் பயன்படுத்த இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
+  panAadhaarPanConsentText:
+    'அடையாள சரிபார்ப்புக்கு எனது PAN ஐப் பயன்படுத்த இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
+  panAadhaarPanConsentTitle: 'PAN சம்மதம்',
+  panAadhaarPanConsentFull:
+    'இந்தக் கடன் விண்ணப்பத்திற்கான அடையாளச் சரிபார்ப்புக்கு மட்டுப்படுத்தப்பட்ட வகையில், எனது PAN ஐப் பயன்படுத்தவும், வருமான வரித் துறை அல்லது அங்கீகரிக்கப்பட்ட PAN சரிபார்ப்பு சேவையிலிருந்து எனது பெயர் மற்றும் PAN நிலையைப் பெறவும் இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.\n\nபொருந்தும் சட்டத்தின் கீழ் அனுமதிக்கப்பட்ட தனிநபர் கடன்கள் மற்றும்/அல்லது பிற நோக்கங்களுக்காக PAN சரிபார்ப்பு அமைப்பு மூலம் இந்தியன் ஓவர்சீஸ் வங்கி எனது அடையாளத்தைச் சரிபார்க்கும் என்பதை நான் புரிந்துகொள்கிறேன்.\n\nஎனது PAN மற்றும் தொடர்புடைய அடையாளத் தரவுகளின் பாதுகாப்பையும் ரகசியத்தன்மையையும் இந்தியன் ஓவர்சீஸ் வங்கி உறுதிசெய்யும்; சட்டம் அல்லது ஒழுங்குமுறைப்படி தேவைப்படுவதைத் தவிர, அடையாளச் சரிபார்ப்பு மற்றும் இந்த விண்ணப்பத்தைச் செயலாக்குவதைத் தவிர வேறு எந்த நோக்கத்திற்கும் அதைப் பயன்படுத்தாது என்பதை நான் புரிந்துகொள்கிறேன்.\n\nவழங்கப்பட்ட PAN ஐப் பயன்படுத்தி என்னைச் சரிபார்த்து அங்கீகரிக்க இந்தியன் ஓவர்சீஸ் வங்கிக்கு நான் அனுமதி அளிக்கிறேன்.',
   panAadhaarReadMore: 'மேலும் படிக்க',
   panAadhaarConsentTitle: 'ஆதார் சம்மதம்',
   panAadhaarConsentFull:

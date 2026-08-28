@@ -10,9 +10,8 @@ import { useLanguage } from '../hooks/useLanguage';
 import { markKycComplete } from '../state/salaryAdvance';
 
 /**
- * End of the KYC/application half of the journey: the eligibility and offer
- * checks have already run upstream and the application is successful. Every flow
- * now lands here (the route the flow tables still call `/sanctioned-offers`).
+ * End of the KYC half of the journey. Every flow now lands here (the route the
+ * flow tables still call `/sanctioned-offers`).
  *
  * Picking and activating the actual advances happens in the second half, on the
  * home Salary Advance tab — so this screen marks KYC complete and its CTA hands
@@ -22,20 +21,18 @@ export function ApplicationSuccessPage() {
   const navigate = useNavigate();
   const [selectedLanguage] = useLanguage();
 
-  // The application is through: KYC is complete from the home screen's view.
+  // KYC is complete from the home screen's view.
   useEffect(() => {
     markKycComplete();
   }, []);
 
   const content = {
     English: {
-      title: 'Your salary advance application is successful',
-      subtitle: 'Your KYC verification is complete.',
+      title: 'Your KYC verification is complete',
       cta: 'Go to home',
     },
     Tamil: {
-      title: 'உங்கள் சம்பள முன்பண விண்ணப்பம் வெற்றிகரமானது',
-      subtitle: 'உங்கள் KYC சரிபார்ப்பு முடிந்தது.',
+      title: 'உங்கள் KYC சரிபார்ப்பு முடிந்தது',
       cta: 'முகப்புக்குச் செல்லவும்',
     },
   };
@@ -70,7 +67,6 @@ export function ApplicationSuccessPage() {
             className="text-center"
           >
             <h1 className="text-xl font-black text-[#111827] tracking-tight leading-snug">{t.title}</h1>
-            <p className="text-sm text-gray-600 leading-relaxed mt-2 max-w-sm mx-auto">{t.subtitle}</p>
           </motion.div>
         </div>
       </main>
