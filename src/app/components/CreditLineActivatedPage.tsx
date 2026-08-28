@@ -109,6 +109,7 @@ export function CreditLineActivatedPage() {
       copyBtn: 'Copy',
       copiedBtn: 'Copied!',
       ctaBtn: 'Connect to Your UPI Apps',
+      goHomeBtn: 'Go to salary advances',
       amount: 'Credit Limit',
       usageTitle: 'Where you can use this',
       customerLabel: 'Customer Name',
@@ -122,6 +123,7 @@ export function CreditLineActivatedPage() {
       copyBtn: 'நகல்',
       copiedBtn: 'நகலெடுக்கப்பட்டது!',
       ctaBtn: 'உங்கள் UPI பயன்பாடுகளுடன் இணைக்கவும்',
+      goHomeBtn: 'சம்பள முன்பணங்களுக்குச் செல்லவும்',
       amount: 'கடன் வரம்பு',
       usageTitle: 'இதை எங்கு பயன்படுத்தலாம்',
       customerLabel: 'வாடிக்கையாளர் பெயர்',
@@ -356,9 +358,21 @@ export function CreditLineActivatedPage() {
           transition={{ duration: 0.5, delay: 0.6 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleConnectUPI}
-          className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center gap-2 transition-colors"
+          className="w-full h-12 rounded-lg bg-[#315C9D] text-white font-semibold text-base flex items-center justify-center gap-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
         >
           {t.ctaBtn}
+        </motion.button>
+
+        {/* Connecting to UPI is optional — let the user skip to Home. */}
+        <motion.button
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.7 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => navigate('/')}
+          className="w-full h-12 mt-2 rounded-lg bg-transparent text-[#315C9D] font-semibold text-base flex items-center justify-center hover:bg-[#315C9D]/5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315C9D]"
+        >
+          {t.goHomeBtn}
         </motion.button>
       </StickyFooter>
     </div>

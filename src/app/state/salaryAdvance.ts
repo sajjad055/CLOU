@@ -78,9 +78,15 @@ export interface SalaryAdvanceState {
   /** 0..KYC_TOTAL_STEPS. */
   completedSteps: number;
   advanceActivated: boolean;
+  /** Whether the activated advances have been linked to a UPI app. */
+  upiConnected: boolean;
 }
 
-const DEFAULT_STATE: SalaryAdvanceState = { completedSteps: 0, advanceActivated: false };
+const DEFAULT_STATE: SalaryAdvanceState = {
+  completedSteps: 0,
+  advanceActivated: false,
+  upiConnected: false,
+};
 
 function clampSteps(n: unknown): number {
   const num = typeof n === 'number' ? n : Number(n);
@@ -95,6 +101,7 @@ function parse(raw: string | null): SalaryAdvanceState {
     return {
       completedSteps: clampSteps(parsed.completedSteps),
       advanceActivated: Boolean(parsed.advanceActivated),
+      upiConnected: Boolean(parsed.upiConnected),
     };
   } catch {
     return DEFAULT_STATE;
@@ -157,7 +164,12 @@ export function markKycComplete(): void {
 
 /** Mark the salary advance activated. Implies KYC is complete. */
 export function markAdvanceActivated(): void {
-  write({ completedSteps: KYC_TOTAL_STEPS, advanceActivated: true });
+  write({ ...getSnapshot(), completedSteps: KYC_TOTAL_STEPS, advanceActivated: true });
+}
+
+/** Mark the activated advances as linked to a UPI app. */
+export function markUpiConnected(): void {
+  write({ ...getSnapshot(), upiConnected: true });
 }
 
 /** Clear all home-screen state back to a first-time visitor. */

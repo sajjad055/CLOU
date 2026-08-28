@@ -18,10 +18,12 @@ export function SuccessSplashPage() {
   return (
     <div className="min-h-screen bg-white relative overflow-hidden flex items-center justify-center">
       <div className="relative z-10 flex flex-col items-center">
+        {/* Fade in only — no scale. Animating scale from 0 rasterises the
+            Lottie canvas at the tiny start size and leaves it blurry. */}
         <motion.div
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.4, type: "spring", stiffness: 200 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
         >
           <div className="w-24 h-24">
             <DotLottieReact src={successLottie} autoplay loop={false} style={{ width: '100%', height: '100%' }} />

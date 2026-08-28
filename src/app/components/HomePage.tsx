@@ -18,7 +18,7 @@ import {
 import kalanjiyamLogo from '@/assets/kalanjiyam-logo.svg';
 import { Stepper } from './Stepper';
 import { EligibleAdvancesSelector } from './EligibleAdvancesSelector';
-import { ActivatedAdvancesList } from './ActivatedAdvancesList';
+import { ActivatedAdvancesDashboard } from './ActivatedAdvancesDashboard';
 import { getActiveFlow, hrmsEntryRoute, isHrmsFlow } from '../flows/hrmsFlows';
 import { resetJourney } from '../flows/hrmsJourney';
 import { useLanguage } from '../hooks/useLanguage';
@@ -154,10 +154,9 @@ export function HomePage() {
     navigate(hrmsEntryRoute(flow) ?? '/hrms-details');
   };
 
-  /** Where an advance card / the UPI card leads, given the current state. */
+  /** The greyed UPI / advance cards only render while KYC is incomplete, so
+   *  tapping them starts (or resumes) the KYC journey. */
   const handleAdvanceClick = () => {
-    if (activated) return navigate('/credit-line-dashboard');
-    if (kycDone) return navigate('/sanctioned-offers');
     startKycJourney();
   };
 
@@ -270,7 +269,7 @@ export function HomePage() {
         {activeTab === 'salary-advance' && (
           <div id="panel-salary-advance" role="tabpanel" aria-labelledby="tab-salary-advance" tabIndex={0} className="focus-visible:outline-none">
             {activated ? (
-              <ActivatedAdvancesList />
+              <ActivatedAdvancesDashboard />
             ) : kycDone ? (
               <EligibleAdvancesSelector embedded />
             ) : (

@@ -91,7 +91,7 @@ const routes: PageRoute[] = [
   { path: '/kyc-aadhaar-otp', name: 'Aadhaar OTP', icon: Smartphone, description: 'Min KYC with limits' },
   { path: '/success', name: 'Success Splash', icon: CheckCircle, description: 'Success animation' },
   { path: '/loading', name: 'Loading', icon: Loader2, description: 'Processing screen' },
-  { path: '/sanctioned-offers', name: 'Offers', icon: CreditCard, description: 'Select credit lines' },
+  { path: '/sanctioned-offers', name: 'Application Success', icon: CheckCircle, description: 'Application successful — CIF created' },
   { path: '/credit-line-processing', name: 'Processing', icon: Settings, description: 'Activation progress' },
   { path: '/credit-line-activated', name: 'Activated', icon: Sparkles, description: 'Success with confetti' },
   { path: '/upi-connection', name: 'UPI Setup', icon: Code2, description: 'Connect to UPI apps' },

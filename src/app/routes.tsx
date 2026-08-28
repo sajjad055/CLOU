@@ -22,7 +22,7 @@ import { CKYCVerificationPage } from "./components/CKYCVerificationPage";
 import { AadhaarOTPPage } from "./components/AadhaarOTPPage";
 import { SuccessSplashPage } from "./components/SuccessSplashPage";
 import { LoadingPage } from "./components/LoadingPage";
-import { SanctionedOffersPage } from "./components/SanctionedOffersPage";
+import { ApplicationSuccessPage } from "./components/ApplicationSuccessPage";
 import { CreditLineProcessingPage } from "./components/CreditLineProcessingPage";
 import { CreditLineActivatedPage } from "./components/CreditLineActivatedPage";
 import { UPIConnectionPage } from "./components/UPIConnectionPage";
@@ -139,7 +139,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "sanctioned-offers",
-        Component: SanctionedOffersPage,
+        Component: ApplicationSuccessPage,
       },
       {
         path: "credit-line-processing",

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, ChevronRight, CreditCard, Building2, CheckCircle, X, Search, Lightbulb } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { markUpiConnected } from '../state/salaryAdvance';
 import phonePeImg from '../../imports/image-13.png';
 
 type Screen = 'home' | 'payment-methods' | 'credit-line' | 'bank-list' | 'account-selection' | 'vpa-creation' | 'success';
@@ -84,6 +85,11 @@ export function PhonePeAppMock() {
   const [selectedAccount, setSelectedAccount] = useState<LoanAccount | null>(null);
   const [vpaName, setVpaName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Reaching the VPA success screen means the advances are now linked to UPI.
+  useEffect(() => {
+    if (currentScreen === 'success') markUpiConnected();
+  }, [currentScreen]);
 
   const handleBack = () => {
     if (currentScreen === 'home') {
